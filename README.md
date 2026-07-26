@@ -20,8 +20,5 @@ Ensure you have the following requirements on your system[cite: 2]:
 * Terminal access[cite: 2]
 * `sha512sum` (included by default on most distributions)[cite: 2]
 
-### Installation Example (Bash)
-```bash
-chmod +x ~/.local/bin/verify-sha512
-chmod +x ~/.local/bin/verify-artist-sha512
-nemo -q
+
+
