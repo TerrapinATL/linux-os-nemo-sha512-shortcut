@@ -61,13 +61,13 @@ Each album directory is verified
 
 03. Step 1 — Create the album verification script
 
---- Bash Script Start ---
+--- Bash Script Step 1 Start ---
 ```bash
 
 nano ~/.local/bin/verify-album-sha512
 
 ```
---- Bash Script End ---
+--- Bash Script Step 1 End ---
 
 # -------------------------------------------------
 
@@ -75,7 +75,7 @@ nano ~/.local/bin/verify-album-sha512
 
 ---
 
---- nano Paste Script Start ---
+--- nano Paste Script Step 2 Start ---
 ```bash
 
 #!/bin/bash
@@ -102,7 +102,7 @@ echo "Press Enter to close..."
 read -r
 
 ```
---- nano Paste Script End ---
+--- nano Paste Script Step 2 End ---
 
 # -------------------------------------------------
 
@@ -114,14 +114,14 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 06. Step 4 — Make it executable
 
---- Bash Script Start ---
+--- Bash Script Step 4 Start ---
 ```bash
 
 chmod +x ~/.local/bin/verify-album-sha512
 ls -l ~/.local/bin/verify-album-sha512   # expect permissions starting with -rwx
 
 ```
---- Bash Script End ---
+--- Bash Script Step 4 End ---
 
 ---
 
@@ -131,22 +131,20 @@ ls -l ~/.local/bin/verify-album-sha512   # expect permissions starting with -rwx
 
 08. Step 5 — Create the action file
 
-# -------------------------------------------------
-
---- Bash Script Start ---
+--- Bash Script Step 5 Start ---
 
 ```bash
 
 nano ~/.local/share/nemo/actions/verify-album-sha512.nemo_action
 
 ```
---- Bash Script End ---
+--- Bash Script Step 5 End ---
 
 # -------------------------------------------------
 
 09. Step 6 — Paste the action
 
---- nano Paste Script Start ---
+--- nano Paste Script Step 6 Start ---
 
 ```ini
 
@@ -162,7 +160,7 @@ Terminal=true
 Active=true
 
 ```
---- nano Paste Script End ---
+--- nano Paste Script Step 6 End ---
 
 # -------------------------------------------------
 
@@ -196,7 +194,7 @@ In nano, hold `Ctrl+K` until the file is empty.
 
 14. Step 10 — Paste the script
 
---- nano Paste Script Start ---
+--- nano Paste Script Step 10 Start ---
 
 ```bash
 
@@ -252,7 +250,7 @@ echo
 read -rp "Press Enter to close..."
 
 ```
---- nano Paste Script End ---
+--- nano Paste Script Step 10 End ---
 
 # -------------------------------------------------
 
@@ -264,14 +262,14 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 16. Step 12 — Make it executable
 
---- Bash Script Start ---
+--- Bash Script Step 12 Start ---
 
 ```bash
 chmod +x ~/.local/bin/verify-artist-sha512
 ls -l ~/.local/bin/verify-artist-sha512   # expect permissions starting with -rwx
 
 ```
---- Bash Script End ---
+--- Bash Script Step 12 End ---
 
 ---
 
@@ -281,19 +279,19 @@ ls -l ~/.local/bin/verify-artist-sha512   # expect permissions starting with -rw
 
 18. Step 13 — Create the action file
 
---- Bash Script Start ---
+--- Bash Script Step 13 Start ---
 ```bash
 
 nano ~/.local/share/nemo/actions/verify-artist-sha512.nemo_action
 
 ```
---- Bash Script End ---
+--- Bash Script Step 13 End ---
 
 # -------------------------------------------------
 
 19. Step 14 — Paste the action
 
---- nano Paste Script Start ---
+--- nano Paste Script Step 14 Start ---
 
 ```ini
 [Nemo Action]
@@ -308,7 +306,7 @@ Terminal=true
 Active=true
 
 ```
---- nano Paste Script End ---
+--- nano Paste Script Step 14 End ---
 
 # -------------------------------------------------
 
