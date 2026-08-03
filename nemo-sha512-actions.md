@@ -81,25 +81,32 @@ nano ~/.local/bin/verify-album-sha512
 #!/bin/bash
 
 echo "==================================================="
-echo " Verifying ALBUM SHA512 Checksum"
+echo " Verifying ALBUM SHA512 Checksums"
 echo "==================================================="
 echo
 
+# If a file was dropped onto the script, change to its directory.
 if [ -n "$1" ]; then
     cd "$(dirname "$1")" || exit 1
 fi
 
 if [ -f "ALBUM.sha512sums.txt" ]; then
-    stdbuf -oL sha512sum -c ALBUM.sha512sums.txt
+    stdbuf -oL sha512sum -c ALBUM.sha512sums.txt 2>&1 |
+    awk -F': ' '
+        NF == 2 {
+            printf "%-8s %s\n", $2, $1
+            next
+        }
+        { print }
+    '
 else
-    echo "MISSING ALBUM.sha512sums.txt"
+    echo "MISSING  ALBUM.sha512sums.txt"
 fi
 
 echo
 echo "Verification Complete."
 echo
-echo "Press Enter to close..."
-read -r
+read -rp "Press Enter to close..."
 
 ```
 --- nano Paste Script End ---
@@ -214,16 +221,17 @@ echo
 if [ -f "ARTIST.sha512sums.txt" ]; then
     artist=$(basename "$PWD")
     echo "=== $artist ==="
+    echo
 
     while IFS= read -r line || [ -n "$line" ]; do
         [ -z "$line" ] && continue
 
         # Extract hash (first word) and album directory (rest of the line)
-        stored_hash=$(echo "$line" | awk '{print $1}')
-        album=$(echo "$line" | sed 's/^[^ ]*[ ]*//')
+        stored_hash=$(awk '{print $1}' <<< "$line")
+        album=$(sed 's/^[^ ]*[ ]*//' <<< "$line")
 
         if [ ! -d "$album" ]; then
-            echo "MISSING $album"
+            printf "%-10s %s\n" "MISSING" "$album"
             continue
         fi
 
@@ -233,17 +241,17 @@ if [ -f "ARTIST.sha512sums.txt" ]; then
             LC_ALL=C sort -z |
             xargs -0 sha512sum |
             sha512sum |
-            cut -d" " -f1
+            cut -d' ' -f1
         )
 
         if [ "$stored_hash" = "$actual_hash" ]; then
-            echo "OK        $album"
+            printf "%-10s %s\n" "OK" "$album"
         else
-            echo "MISMATCH  $album"
+            printf "%-10s %s\n" "MISMATCH" "$album"
         fi
     done < ARTIST.sha512sums.txt
 else
-    echo "MISSING ARTIST.sha512sums.txt"
+    printf "%-10s %s\n" "MISSING" "ARTIST.sha512sums.txt"
 fi
 
 echo
