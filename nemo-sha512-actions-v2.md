@@ -73,8 +73,6 @@ nano ~/.local/bin/verify-album-sha512
 
 04. Step 2 — Paste the script
 
----
-
 --- nano Paste Script Step 2 Start ---
 ```bash
 
