@@ -2,6 +2,9 @@
 
 **Version: v1** — First version. Merges the SHA512 and ReplayGain Nemo actions into a single guide, and adds tag-verification and tag-writing actions.
 
+Change log and version history are maintained separately:
+[linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)
+
 ---
 
 01. Introduction
@@ -27,7 +30,7 @@ Note: These actions print their results to the terminal (or a popup) rather than
 
 Every `.nemo_action` file in this guide contains an `Exec=` line with a `<YOURUSERNAME>` placeholder, for example `/home/<YOURUSERNAME>/.local/bin/verify-album-sha512`. Before the actions will run, replace `<YOURUSERNAME>` with your actual Linux username in **each** action file. Do not paste the placeholder literally — Nemo will simply do nothing if the path does not exist.
 
-This is the single most common reasons the actions appear not to work for someone new. If a right-click action silently fails, check that you replaced the placeholder and that the script exists at the path you gave it.
+This is the single most common reason the actions appear not to work for someone new. If a right-click action silently fails, check that you replaced the placeholder and that the script exists at the path you gave it.
 
 ---
 
@@ -49,6 +52,11 @@ sudo apt install loudgain
 
 ```
 --- Bash Script End ---
+
+* flac package (provides `metaflac`, used by the Write Tags action for FLAC).
+* eyeD3 (used by the Write Tags action for MP3). Install with `sudo apt install python3-eyed3` (Debian family) or `python3 -m pip install --user eyeD3`.
+* AtomicParsley (used by the Write Tags action for M4A/MP4). Install with `sudo apt install atomicparsley`.
+* jq (for the Report Tag/Filename Mismatches action). Install with `sudo apt install jq`.
 
 -- Expected folder structure
 
@@ -188,7 +196,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 The artist action verifies each album directory listed in `ARTIST.sha512sums.txt` inside an artist folder.
 
--- Step 8 — Create the artist verification script
+-- Step 1 — Create the artist verification script
 
 --- Bash Script Start ---
 ```bash
@@ -198,11 +206,11 @@ nano ~/.local/bin/verify-artist-sha512
 ```
 --- Bash Script End ---
 
--- Step 9 — Clear old contents (if replacing an existing script)
+-- Step 2 — Clear old contents (if replacing an existing script)
 
 In nano, hold `Ctrl+K` until the file is empty.
 
--- Step 10 — Paste the script
+-- Step 3 — Paste the script
 
 --- nano Paste Script Start ---
 ```bash
@@ -262,11 +270,11 @@ read -rp "Press Enter to close..."
 ```
 --- nano Paste Script End ---
 
--- Step 11 — Save the script
+-- Step 4 — Save the script
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
--- Step 12 — Make it executable
+-- Step 5 — Make it executable
 
 --- Bash Script Start ---
 ```bash
@@ -277,7 +285,7 @@ ls -l ~/.local/bin/verify-artist-sha512   # expect permissions starting with -rw
 ```
 --- Bash Script End ---
 
--- Step 13 — Create the action file
+-- Step 6 — Create the action file
 
 --- Bash Script Start ---
 ```bash
@@ -287,7 +295,7 @@ nano ~/.local/share/nemo/actions/verify-artist-sha512.nemo_action
 ```
 --- Bash Script End ---
 
--- Step 14 — Paste the action
+-- Step 7 — Paste the action
 
 --- nano Paste Script Start ---
 ```ini
@@ -306,7 +314,7 @@ Active=true
 ```
 --- nano Paste Script End ---
 
--- Step 15 — Save
+-- Step 8 — Save
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
@@ -320,7 +328,7 @@ The Show ReplayGain action reads the current ReplayGain tags of one or more sele
 
 It uses ffprobe to read tags uniformly across FLAC (Vorbis comments), MP3 (ID3v2 TXXX frames), and M4A (MP4 freeform atoms). These formats store `REPLAYGAIN_TRACK_GAIN` / `_PEAK` and `REPLAYGAIN_ALBUM_GAIN` / `_PEAK` under the same key names when written by loudgain, so one code path covers all.
 
--- Step 16 — Create the script
+-- Step 1 — Create the script
 
 --- Bash Script Start ---
 ```bash
@@ -330,7 +338,7 @@ nano ~/.local/bin/show-replaygain.sh
 ```
 --- Bash Script End ---
 
--- Step 17 — Paste the script
+-- Step 2 — Paste the script
 
 --- nano Paste Script Start ---
 ```bash
@@ -432,11 +440,11 @@ fi
 ```
 --- nano Paste Script End ---
 
--- Step 18 — Save the script
+-- Step 3 — Save the script
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
--- Step 19 — Make it executable
+-- Step 4 — Make it executable
 
 --- Bash Script Start ---
 ```bash
@@ -446,7 +454,7 @@ chmod +x ~/.local/bin/show-replaygain.sh
 ```
 --- Bash Script End ---
 
--- Step 20 — Create the action file
+-- Step 5 — Create the action file
 
 --- Bash Script Start ---
 ```bash
@@ -456,7 +464,7 @@ nano ~/.local/share/nemo/actions/show-replaygain.nemo_action
 ```
 --- Bash Script End ---
 
--- Step 21 — Paste the action
+-- Step 6 — Paste the action
 
 --- nano Paste Script Start ---
 ```ini
@@ -468,14 +476,14 @@ Comment=Display ReplayGain tags for selected audio files
 Exec=/home/<YOURUSERNAME>/.local/bin/show-replaygain.sh %F
 Icon=audio-x-generic
 Selection=notnone
-Extensions=flac;mp3;m4a;
+Extensions=flac;mp3;m4a;mp4;ogg;opus;wav;aiff;wv;ape;
 Quote=double
 Dependencies=ffprobe;zenity;
 
 ```
 --- nano Paste Script End ---
 
--- Step 22 — Save
+-- Step 7 — Save
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
@@ -485,11 +493,13 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-The Apply ReplayGain action computes and writes **Album + Track** ReplayGain across every supported audio file in the folder, using loudgain. It is intended to be run by right-clicking inside (or on) the folder you want to process, and it reports progress in a terminal.
+The Apply ReplayGain action computes and writes ReplayGain across every supported audio file in the folder, using loudgain. It is intended to be run by right-clicking inside (or on) the folder you want to process, and it reports progress in a terminal.
+
+FLAC, MP3, OGG, Opus, WAV, AIFF, and the other non-MP4 formats get **Album + Track** gain. M4A/MP4 files get **Track gain only** — loudgain has an upstream segfault bug writing album-level tags into MP4/M4A atoms (the same bug documented in the Recertification guide, Step 2B), so this action applies the same workaround: an ffmpeg stream-copy container sanitize followed by track gain.
 
 It does not verify ReplayGain afterwards — use the Show ReplayGain action for that. To re-certify an album after adding ReplayGain, run the relevant checksum steps from the Recertification guide.
 
--- Step 23 — Create the script
+-- Step 1 — Create the script
 
 --- Bash Script Start ---
 ```bash
@@ -499,14 +509,20 @@ nano ~/.local/bin/apply-replaygain-folder
 ```
 --- Bash Script End ---
 
--- Step 24 — Paste the script
+-- Step 2 — Paste the script
 
 --- nano Paste Script Start ---
 ```bash
 
 #!/bin/bash
-# Apply ReplayGain (Album + Track) to every supported audio file in a folder.
+# Apply ReplayGain to every supported audio file in a folder.
 # Called from a Nemo Action (see apply-replaygain-folder.nemo_action).
+#
+# M4A/MP4 exception: loudgain has an upstream segfault bug when writing
+# album-level tags into MP4/M4A atoms (documented in the Recertification
+# guide, Step 2B). M4A/MP4 files are therefore container-sanitized with
+# ffmpeg (stream copy) and given Track Gain only; every other format gets
+# full Album + Track gain.
 
 # If invoked with a folder path, move into it. Loudgain processes the
 # current directory, so this works whether you right-click a folder or
@@ -531,28 +547,52 @@ if ! command -v loudgain >/dev/null 2>&1; then
 fi
 
 shopt -s nullglob nocaseglob
-files=( *.flac *.mp3 *.m4a *.ogg *.opus *.mp4 *.aac *.ape *.wv *.mpc *.spx )
+m4a_files=( *.m4a *.mp4 )
+other_files=( *.flac *.mp3 *.ogg *.opus *.wav *.aiff *.aif )
+shopt -u nullglob nocaseglob
 
-if [ ${#files[@]} -eq 0 ]; then
+total=$(( ${#m4a_files[@]} + ${#other_files[@]} ))
+
+if [ "$total" -eq 0 ]; then
     echo "No supported audio files found in this folder."
     echo
     read -rp "Press Enter to close..."
     exit 0
 fi
 
-echo "Processing ${#files[@]} audio file(s)..."
+echo "Processing $total audio file(s)..."
 echo
 
-loudgain -a -k -s e -L -- "${files[@]}"
+rc=0
 
-rc=$?
+if [ ${#m4a_files[@]} -gt 0 ]; then
+    echo "--- M4A/MP4: container sanitize + Track Gain (${#m4a_files[@]} file(s)) ---"
+    for f in "${m4a_files[@]}"; do
+        tmp=$(mktemp "${TMPDIR:-/tmp}/rg-fixed.XXXXXX.${f##*.}")
+        if ffmpeg -nostdin -v error -i "$f" -map 0 -map_metadata 0 -c copy -movflags +faststart "$tmp"; then
+            mv "$tmp" "$f"
+        else
+            echo "Warning: FFmpeg container fix failed for $f (tagging skipped)"
+            rm -f "$tmp"
+        fi
+    done
+    loudgain -k -s e -L -- "${m4a_files[@]}"
+    [ $? -ne 0 ] && rc=1
+fi
+
+if [ ${#other_files[@]} -gt 0 ]; then
+    echo
+    echo "--- Album + Track Gain (${#other_files[@]} file(s)) ---"
+    loudgain -a -k -s e -L -- "${other_files[@]}"
+    [ $? -ne 0 ] && rc=1
+fi
 
 echo
 echo "----------------------------------------"
 if [ "$rc" -eq 0 ]; then
-    echo "SUMMARY: ReplayGain applied to ${#files[@]} file(s) (album + track)."
+    echo "SUMMARY: ReplayGain applied to $total file(s)."
 else
-    echo "SUMMARY: Loudgain finished with errors (exit code $rc)."
+    echo "SUMMARY: Loudgain finished with errors."
 fi
 echo "----------------------------------------"
 echo
@@ -562,11 +602,11 @@ read -rp "Press Enter to close..."
 ```
 --- nano Paste Script End ---
 
--- Step 25 — Save the script
+-- Step 3 — Save the script
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
--- Step 26 — Make it executable
+-- Step 4 — Make it executable
 
 --- Bash Script Start ---
 ```bash
@@ -576,7 +616,7 @@ chmod +x ~/.local/bin/apply-replaygain-folder
 ```
 --- Bash Script End ---
 
--- Step 27 — Create the action file
+-- Step 5 — Create the action file
 
 --- Bash Script Start ---
 ```bash
@@ -586,7 +626,7 @@ nano ~/.local/share/nemo/actions/apply-replaygain-folder.nemo_action
 ```
 --- Bash Script End ---
 
--- Step 28 — Paste the action
+-- Step 6 — Paste the action
 
 --- nano Paste Script Start ---
 ```ini
@@ -607,7 +647,7 @@ Dependencies=loudgain;
 
 Note: `%P` passes the folder the action was launched in, so the script processes the entire enclosing folder regardless of the exact item you right-click.
 
--- Step 29 — Save
+-- Step 7 — Save
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
@@ -621,7 +661,7 @@ This action scans a folder (recursively, for the checked scope) and reports ever
 
 It compares case-insensitively and ignores whitespace, so harmless differences in capitalization are not flagged. Files whose name has no `NN - Title` prefix are reported specially rather than falsely matched.
 
--- Step 30 — Create the script
+-- Step 1 — Create the script
 
 --- Bash Script Start ---
 ```bash
@@ -631,7 +671,7 @@ nano ~/.local/bin/report-tag-mismatches
 ```
 --- Bash Script End ---
 
--- Step 31 — Paste the script
+-- Step 2 — Paste the script
 
 --- nano Paste Script Start ---
 ```bash
@@ -640,17 +680,25 @@ nano ~/.local/bin/report-tag-mismatches
 # Check for mismatches between embedded tags and filenames.
 # Lenient comparison: case-insensitive, whitespace-trimmed.
 # Handles files whose name has no "NN - " prefix (reported, not falsely matched).
+#
+# The report is written to ~/.logs/linux-audio-nemo-actions/ (suite
+# convention: nothing is ever written into the music folders).
 
 if [ -n "$1" ] && [ -d "$1" ]; then
     cd "$1" || exit 1
 fi
 
 START_DIR=$(pwd)
-OUTPUT_FILE="$START_DIR/meta-tag-mismatches.md"
+LOG_DIR="$HOME/.logs/linux-audio-nemo-actions"
+mkdir -p "$LOG_DIR"
+OUTPUT_FILE="$LOG_DIR/meta-tag-mismatches.md"
 TEMP_RESULTS=$(mktemp)
 trap 'rm -f "$TEMP_RESULTS"' EXIT
 
-norm() { tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' '; }
+# Case-insensitive, whitespace-collapsed, trimmed. sed is used instead of
+# xargs so titles containing quotes/apostrophes ("Don't Stop") are never
+# mangled into false mismatches.
+norm() { tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
 
 find . -type f \( -iname "*.flac" -o -iname "*.mp3" -o -iname "*.m4a" \) | sort | while read -r filepath; do
     filename=$(basename "$filepath")
@@ -682,8 +730,8 @@ find . -type f \( -iname "*.flac" -o -iname "*.mp3" -o -iname "*.m4a" \) | sort 
     meta_num_clean=$(printf '%s' "$meta_track_num" | sed -E 's/^0*([0-9]+).*/\1/')
     [ -z "$meta_num_clean" ] && meta_num_clean="0"
 
-    file_name_norm=$(printf '%s' "$file_track_name" | norm | xargs)
-    meta_name_norm=$(printf '%s' "$meta_track_name" | norm | xargs)
+    file_name_norm=$(printf '%s' "$file_track_name" | norm)
+    meta_name_norm=$(printf '%s' "$meta_track_name" | norm)
 
     mismatch=0
     if [ "$file_track_num" = "NONE" ]; then
@@ -734,11 +782,11 @@ echo "Report written to: $OUTPUT_FILE"
 ```
 --- nano Paste Script End ---
 
--- Step 32 — Save the script
+-- Step 3 — Save the script
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
--- Step 33 — Make it executable
+-- Step 4 — Make it executable
 
 --- Bash Script Start ---
 ```bash
@@ -748,7 +796,7 @@ chmod +x ~/.local/bin/report-tag-mismatches
 ```
 --- Bash Script End ---
 
--- Step 34 — Create the action file
+-- Step 5 — Create the action file
 
 --- Bash Script Start ---
 ```bash
@@ -758,7 +806,7 @@ nano ~/.local/share/nemo/actions/report-tag-mismatches.nemo_action
 ```
 --- Bash Script End ---
 
--- Step 35 — Paste the action
+-- Step 6 — Paste the action
 
 --- nano Paste Script Start ---
 ```ini
@@ -779,7 +827,7 @@ Dependencies=ffprobe;jq;
 
 Note: `%P` passes the folder the action was launched in, so the report covers the entire enclosing scope.
 
--- Step 36 — Save
+-- Step 7 — Save
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
@@ -811,7 +859,7 @@ Therefore the convention is a **required precondition**, not a suggestion. Do **
 
 The script refuses to guess. If the album folder has no leading year, it aborts and tells you, rather than write an album with a missing or wrong year that would silently break the rebuild-from-tags property. If a track name does not match the `NN - Title` pattern, that file is skipped and reported so you can fix its name first.
 
--- Step 37 — Create the script
+-- Step 1 — Create the script
 
 --- Bash Script Start ---
 ```bash
@@ -821,7 +869,7 @@ nano ~/.local/bin/write-tags-from-names
 ```
 --- Bash Script End ---
 
--- Step 38 — Paste the script
+-- Step 2 — Paste the script
 
 --- nano Paste Script Start ---
 ```bash
@@ -881,7 +929,7 @@ while IFS= read -r -d '' filepath; do
         track_name="${BASH_REMATCH[2]}"
     else
         SKIPPED+=("$filepath")
-        printf 'SKIP    %-14.14s %s (name has no "NN - Title")\n' "$ext" "$filename"
+        printf 'SKIP    %-4s %s (name has no "NN - Title")\n' "$ext" "$filename"
         continue
     fi
 
@@ -960,11 +1008,11 @@ read -rp "Press Enter to close..."
 ```
 --- nano Paste Script End ---
 
--- Step 39 — Save the script
+-- Step 3 — Save the script
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
--- Step 40 — Make it executable
+-- Step 4 — Make it executable
 
 --- Bash Script Start ---
 ```bash
@@ -974,7 +1022,7 @@ chmod +x ~/.local/bin/write-tags-from-names
 ```
 --- Bash Script End ---
 
--- Step 41 — Create the action file
+-- Step 5 — Create the action file
 
 --- Bash Script Start ---
 ```bash
@@ -984,7 +1032,7 @@ nano ~/.local/share/nemo/actions/write-tags-from-names.nemo_action
 ```
 --- Bash Script End ---
 
--- Step 42 — Paste the action
+-- Step 6 — Paste the action
 
 --- nano Paste Script Start ---
 ```ini
@@ -1003,7 +1051,7 @@ Dependencies=AtomicParsley;eyeD3;metaflac;
 ```
 --- nano Paste Script End ---
 
--- Step 43 — Save
+-- Step 7 — Save
 
 In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
@@ -1173,14 +1221,16 @@ nemo -q
 ```
 --- Bash Script End ---
 
-    5. Test all seven actions as described in Section 11 — Part 8: Testing.
+    5. Test all six actions as described in Section 11 — Part 8: Testing.
 
 Setup is confirmed restored once the actions appear in the Nemo right-click menu.
 
-\-------------------------------------------------------------------
+\---------------------------------------------------------------------------------------
 
 -- Disclaimer
 
 This guide was developed through iterative collaborative effort between ChatGPT, Claude, Gemini, Mistral and the user. I cannot thank OpenCode project enough. I was about to give up on the other four (well, actually I did) when I came across OpenCode. I run a 10+ year old laptop yet OpenCode ran perfectly well, offloading the heaving lifting to an offsite server.
 
 https://opencode.ai/
+
+
