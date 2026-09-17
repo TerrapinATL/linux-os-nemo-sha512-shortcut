@@ -4,9 +4,9 @@ All version changes are appended to this file, newest last, one `## vX Change Lo
 
 **Update rule:** before writing to the version-less main guide file, the current content must first be saved as a versioned copy (e.g. `linux-audio-nemo-actions-v1.md`) so every published version stays retrievable.
 
-**Suite convention (auto-purge):** applies to guides/repos that write logs. This guide deliberately writes no logs — actions print to the terminal or popups, and the one report file (Part 5) goes to `~/.logs/linux-audio-nemo-actions/` where it is overwritten each run — so no auto-purge step is needed here.
-
-**Current version: v1** — First version.
+**Current version: v2** — adds the automated-installation note
+(OpenCode can install all actions from the guide on request). See the
+v2 entry below.
 
 Main guide: [linux-audio-nemo-actions.md](linux-audio-nemo-actions.md)
 
@@ -55,3 +55,23 @@ Review corrections applied 2026-09-14:
 * Minor fixes: "seven actions" → six in the restore instructions; grammar
   in the YOURUSERNAME note; SKIP report column formatting; long dash
   dividers standardized to the suite's 87-dash convention.
+
+---
+
+## v2 Change Log (2026-09-17)
+
+* **Automated-installation note added to the Introduction.** Documents
+  that [OpenCode](https://opencode.ai/) can install all six actions
+  automatically upon request — extracting every script and
+  `.nemo_action` file from the guide into `~/.local/bin/` and
+  `~/.local/share/nemo/actions/`, replacing `<YOURUSERNAME>` placeholders,
+  making scripts executable, and restarting Nemo — since the guide text
+  is the single source of truth, an OpenCode-assisted install is always
+  the current version. It can also uninstall or refresh individual
+  actions on request.
+* No changes to the six actions themselves; v1's script and action
+  content is unchanged.
+* First OpenCode-assisted install performed 2026-09-17: all six actions
+  deployed from the guide (three refreshed, three newly installed;
+  prior copies backed up under
+  `~/.local/share/nemo/actions/OLD/scripts-backup-2026-09-17/`).
