@@ -1,6 +1,8 @@
 ### linux-audio-nemo-actions
 
-**Version: v1** — First version. Merges the SHA512 and ReplayGain Nemo actions into a single guide, and adds tag-verification and tag-writing actions.
+**Version: v2** — Adds the automated-installation note (OpenCode can
+install all actions from the guide on request). Content of the six
+actions is unchanged from v1. (Note added 2026-09-17.)
 
 Change log and version history are maintained separately:
 [linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)
@@ -14,6 +16,8 @@ Change log and version history are maintained separately:
 This guide installs a set of Nemo right-click actions for moOde-aware music libraries on Linux Mint. It brings together the SHA512 checksum verification actions and the ReplayGain actions into one place, as part of the **moOde Library Integrity Suite**.
 
 Unlike the whole-library guides in this suite (moOde Cleanup and SHA512 Library), these Nemo actions are designed for quick, **Artist- or Album-specific** work. They are invoked by right-clicking on a file or folder in the Nemo file manager and run instantly, without loading a full workflow.
+
+**Shortcut: automated installation.** The manual nano/paste steps in Parts 1–6 describe exactly what to install, but you do not have to do them by hand — **[OpenCode](https://opencode.ai/) can install all of these actions automatically upon request.** Ask it to "install the Nemo actions from the guide" and it will extract every script and `.nemo_action` file from this document into `~/.local/bin/` and `~/.local/share/nemo/actions/` (replacing `<YOURUSERNAME>` placeholders, making scripts executable, and restarting Nemo), then re-verify the installation. It can also uninstall or refresh individual actions on request. This works for any guide in the suite: the guide text is the single source of truth, so an OpenCode-assisted install is always the current version.
 
 The actions installed here are:
 
@@ -1232,5 +1236,3 @@ Setup is confirmed restored once the actions appear in the Nemo right-click menu
 This guide was developed through iterative collaborative effort between ChatGPT, Claude, Gemini, Mistral and the user. I cannot thank OpenCode project enough. I was about to give up on the other four (well, actually I did) when I came across OpenCode. I run a 10+ year old laptop yet OpenCode ran perfectly well, offloading the heaving lifting to an offsite server.
 
 https://opencode.ai/
-
-
