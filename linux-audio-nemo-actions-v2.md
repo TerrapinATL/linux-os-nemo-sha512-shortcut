@@ -334,20 +334,20 @@ It uses ffprobe to read tags uniformly across FLAC (Vorbis comments), MP3 (ID3v2
 
 -- Step 1 — Create the script
 
---- Script Start ---
+--- Bash Script Start ---
 ```bash
 
-nano ~/.local/bin/show-replaygain
+nano ~/.local/bin/show-replaygain.sh
 
 ```
---- Script End ---
+--- Bash Script End ---
 
 -- Step 2 — Paste the script
 
 --- nano Paste Script Start ---
-```python
+```bash
 
-#!/usr/bin/env python3
+#!/bin/bash
 # Show ReplayGain tags for one or more selected FLAC/MP3/M4A files.
 # Called from a Nemo Action (see show-replaygain.nemo_action).
 #
@@ -356,106 +356,90 @@ nano ~/.local/bin/show-replaygain
 # All three store REPLAYGAIN_TRACK_GAIN / _PEAK and REPLAYGAIN_ALBUM_GAIN / _PEAK
 # under the same key names when written by loudgain, so one code path covers all.
 
-import os
-import subprocess
-import sys
+get_tag() {  # $1 = ffprobe tag dump, $2 = tag name
+    printf '%s\n' "$1" | grep -i "^TAG:${2}=" | head -n1 | cut -d= -f2-
+}
 
+declare -a ROWS=()
+ALBUM_GAIN_SEEN=""
+ALBUM_PEAK_SEEN=""
+ALBUM_ARTIST_SEEN=""
+ALBUM_SEEN=""
+MISMATCH=0
+ARTIST_MISMATCH=0
+ALBUM_MISMATCH=0
+LAST_TG=""
+LAST_TP=""
+LAST_AA=""
+LAST_AL=""
+LAST_NAME=""
 
-def get_tags(path):
-    try:
-        out = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format_tags",
-             "-of", "default=noprint_wrappers=1", path],
-            capture_output=True, text=True, timeout=30,
-        ).stdout
-    except Exception:
-        out = ""
-    tags = {}
-    for line in out.splitlines():
-        if line.startswith("TAG:") and "=" in line:
-            key, val = line[4:].split("=", 1)
-            if key.lower() not in tags:
-                tags[key.lower()] = val
-    return tags
+for f in "$@"; do
+    [ -f "$f" ] || continue
+    tags=$(ffprobe -v error -show_entries format_tags -of default=noprint_wrappers=1 "$f" 2>/dev/null)
 
+    tg=$(get_tag "$tags" REPLAYGAIN_TRACK_GAIN)
+    tp=$(get_tag "$tags" REPLAYGAIN_TRACK_PEAK)
+    ag=$(get_tag "$tags" REPLAYGAIN_ALBUM_GAIN)
+    ap=$(get_tag "$tags" REPLAYGAIN_ALBUM_PEAK)
+    aa=$(get_tag "$tags" album_artist)
+    al=$(get_tag "$tags" album)
 
-def main():
-    files = [f for f in sys.argv[1:] if os.path.isfile(f)]
-    if not files:
-        return
+    name=$(basename -- "$f")
+    ROWS+=("$name" "${tg:-Not set}" "${tp:-Not set}")
+    LAST_TG="$tg"; LAST_TP="$tp"; LAST_AA="$aa"; LAST_AL="$al"; LAST_NAME="$name"
 
-    rows = []
-    album_gain_seen = album_peak_seen = album_artist_seen = album_seen = None
-    mismatch = artist_mismatch = album_mismatch = False
-    last = {}
+    if [ -n "$ag" ]; then
+        if [ -z "$ALBUM_GAIN_SEEN" ]; then
+            ALBUM_GAIN_SEEN="$ag"; ALBUM_PEAK_SEEN="$ap"
+        elif [ "$ag" != "$ALBUM_GAIN_SEEN" ] || [ "$ap" != "$ALBUM_PEAK_SEEN" ]; then
+            MISMATCH=1
+        fi
+    fi
 
-    for path in files:
-        tags = get_tags(path)
-        tg = tags.get("replaygain_track_gain")
-        tp = tags.get("replaygain_track_peak")
-        ag = tags.get("replaygain_album_gain")
-        ap = tags.get("replaygain_album_peak")
-        aa = tags.get("album_artist")
-        al = tags.get("album")
+    if [ -n "$aa" ]; then
+        if [ -z "$ALBUM_ARTIST_SEEN" ]; then
+            ALBUM_ARTIST_SEEN="$aa"
+        elif [ "$aa" != "$ALBUM_ARTIST_SEEN" ]; then
+            ARTIST_MISMATCH=1
+        fi
+    fi
 
-        name = os.path.basename(path)
-        rows.append((name, tg or "Not set", tp or "Not set"))
-        last = {"tg": tg, "tp": tp, "aa": aa, "al": al, "name": name}
+    if [ -n "$al" ]; then
+        if [ -z "$ALBUM_SEEN" ]; then
+            ALBUM_SEEN="$al"
+        elif [ "$al" != "$ALBUM_SEEN" ]; then
+            ALBUM_MISMATCH=1
+        fi
+    fi
+done
 
-        if ag:
-            if album_gain_seen is None:
-                album_gain_seen, album_peak_seen = ag, ap
-            elif ag != album_gain_seen or ap != album_peak_seen:
-                mismatch = True
-
-        if aa:
-            if album_artist_seen is None:
-                album_artist_seen = aa
-            elif aa != album_artist_seen:
-                artist_mismatch = True
-
-        if al:
-            if album_seen is None:
-                album_seen = al
-            elif al != album_seen:
-                album_mismatch = True
-
-    artist = last["aa"] or album_artist_seen or "Unknown Artist"
-    album = last["al"] or album_seen or "Unknown Album"
-    title = f"{artist} — {album}"
-
-    if len(files) == 1:
-        text = (
-            f"File: {last['name']}\n"
-            f"Track Gain: {last['tg'] or 'Not set'}\n"
-            f"Track Peak: {last['tp'] or 'Not set'}\n"
-            f"Album Gain: {album_gain_seen or 'Not set'}\n"
-            f"Album Peak: {album_peak_seen or 'Not set'}"
-        )
-        subprocess.run(
-            ["zenity", "--info", f"--title={title}", "--width=420", f"--text={text}"],
-            check=False,
-        )
-    else:
-        text = (f"Album Gain: {album_gain_seen or 'Not set'}    "
-                f"Album Peak: {album_peak_seen or 'Not set'}")
-        if mismatch:
-            text += "\n\u26a0 Album Gain/Peak values are NOT consistent across the selected files"
-        if artist_mismatch or album_mismatch:
-            text += "\n\u26a0 Tracks appear to be from multiple different albums or artists"
-
-        cmd = [
-            "zenity", "--list", f"--title={title}",
-            "--width=760", "--height=480", f"--text={text}",
-            "--column=Track", "--column=Track Gain", "--column=Track Peak",
-        ]
-        for row in rows:
-            cmd.extend(row)
-        subprocess.run(cmd, check=False)
-
-
-if __name__ == "__main__":
-    main()
+if [ "$#" -eq 1 ]; then
+    zenity --info \
+        --title="${LAST_AA:-Unknown Artist} — ${LAST_AL:-Unknown Album}" \
+        --width=420 \
+        --text="File: ${LAST_NAME}
+Track Gain: ${LAST_TG:-Not set}
+Track Peak: ${LAST_TP:-Not set}
+Album Gain: ${ALBUM_GAIN_SEEN:-Not set}
+Album Peak: ${ALBUM_PEAK_SEEN:-Not set}"
+else
+    TEXT="Album Gain: ${ALBUM_GAIN_SEEN:-Not set}    Album Peak: ${ALBUM_PEAK_SEEN:-Not set}"
+    if [ "$MISMATCH" -eq 1 ]; then
+        TEXT="${TEXT}
+⚠ Album Gain/Peak values are NOT consistent across the selected files"
+    fi
+    if [ "$ARTIST_MISMATCH" -eq 1 ] || [ "$ALBUM_MISMATCH" -eq 1 ]; then
+        TEXT="${TEXT}
+⚠ Tracks appear to be from multiple different albums or artists"
+    fi
+    zenity --list \
+        --title="${ALBUM_ARTIST_SEEN:-Unknown Artist} — ${ALBUM_SEEN:-Unknown Album}" \
+        --width=760 --height=480 \
+        --text="$TEXT" \
+        --column="Track" --column="Track Gain" --column="Track Peak" \
+        "${ROWS[@]}"
+fi
 
 ```
 --- nano Paste Script End ---
@@ -469,7 +453,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 --- Bash Script Start ---
 ```bash
 
-chmod +x ~/.local/bin/show-replaygain
+chmod +x ~/.local/bin/show-replaygain.sh
 
 ```
 --- Bash Script End ---
@@ -493,12 +477,12 @@ nano ~/.local/share/nemo/actions/show-replaygain.nemo_action
 Active=true
 Name=Show ReplayGain
 Comment=Display ReplayGain tags for selected audio files
-Exec=/home/<YOURUSERNAME>/.local/bin/show-replaygain %F
+Exec=/home/<YOURUSERNAME>/.local/bin/show-replaygain.sh %F
 Icon=audio-x-generic
 Selection=notnone
 Extensions=flac;mp3;m4a;mp4;ogg;opus;wav;aiff;wv;ape;
 Quote=double
-Dependencies=ffprobe;zenity;python3;
+Dependencies=ffprobe;zenity;
 
 ```
 --- nano Paste Script End ---
@@ -1195,7 +1179,7 @@ Keep copies of:
 
 * ~/.local/bin/verify-album-sha512
 * ~/.local/bin/verify-artist-sha512
-* ~/.local/bin/show-replaygain
+* ~/.local/bin/show-replaygain.sh
 * ~/.local/bin/apply-replaygain-folder
 * ~/.local/bin/report-tag-mismatches
 * ~/.local/bin/write-tags-from-names
@@ -1223,7 +1207,7 @@ Use after a Linux reinstall, system rebuild, or move to another machine.
 
 chmod +x ~/.local/bin/verify-album-sha512
 chmod +x ~/.local/bin/verify-artist-sha512
-chmod +x ~/.local/bin/show-replaygain
+chmod +x ~/.local/bin/show-replaygain.sh
 chmod +x ~/.local/bin/apply-replaygain-folder
 chmod +x ~/.local/bin/report-tag-mismatches
 chmod +x ~/.local/bin/write-tags-from-names

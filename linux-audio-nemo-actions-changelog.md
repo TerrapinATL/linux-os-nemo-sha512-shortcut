@@ -4,9 +4,8 @@ All version changes are appended to this file, newest last, one `## vX Change Lo
 
 **Update rule:** before writing to the version-less main guide file, the current content must first be saved as a versioned copy (e.g. `linux-audio-nemo-actions-v1.md`) so every published version stays retrievable.
 
-**Current version: v2** — adds the automated-installation note
-(OpenCode can install all actions from the guide on request). See the
-v2 entry below.
+**Current version: v3** — converts the Show ReplayGain action's script
+from bash to extensionless Python (see the v3 entry below).
 
 Main guide: [linux-audio-nemo-actions.md](linux-audio-nemo-actions.md)
 
@@ -75,3 +74,22 @@ Review corrections applied 2026-09-14:
   deployed from the guide (three refreshed, three newly installed;
   prior copies backed up under
   `~/.local/share/nemo/actions/OLD/scripts-backup-2026-09-17/`).
+
+---
+
+## v3 Change Log (2026-09-20)
+
+* **Show ReplayGain script converted to Python** — `show-replaygain.sh`
+  (bash) is now `show-replaygain` (extensionless Python with a
+  `#!/usr/bin/env python3` shebang), per the no-`.sh`-files convention.
+  Functionality is unchanged: ffprobe tag reading, single-file info popup,
+  multi-file comparison table with album/artist consistency warnings.
+* **Exec line updated** — `Exec=/home/<YOURUSERNAME>/.local/bin/show-replaygain %F`
+  (was `show-replaygain.sh`).
+* **Dependencies updated** — the action's `Dependencies=` line now includes
+  `python3` (`Dependencies=ffprobe;zenity;python3;`).
+* **Guide steps updated** — Steps 1/2/4/6 of Part 3 now show the Python
+  script and the extensionless filename; the Backup list and the Restore
+  section's chmod commands were updated to match.
+* **Versioned copy** — the prior guide (v2) was archived as
+  `linux-audio-nemo-actions-v2.md` before editing, per the update rule.
