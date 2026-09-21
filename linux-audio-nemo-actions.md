@@ -1,8 +1,8 @@
 ### linux-audio-nemo-actions
 
-**Version: v2** — Adds the automated-installation note (OpenCode can
-install all actions from the guide on request). Content of the six
-actions is unchanged from v1. (Note added 2026-09-17.)
+**Version: v3** — Converts the Show ReplayGain action script to
+extensionless Python (`show-replaygain`, no extension); the other five
+actions are unchanged from v2. (Converted 2026-09-20.)
 
 Change log and version history are maintained separately:
 [linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)
