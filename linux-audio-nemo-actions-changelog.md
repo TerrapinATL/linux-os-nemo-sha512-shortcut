@@ -93,3 +93,30 @@ Review corrections applied 2026-09-14:
   section's chmod commands were updated to match.
 * **Versioned copy** — the prior guide (v2) was archived as
   `linux-audio-nemo-actions-v2.md` before editing, per the update rule.
+
+## v4 Change Log (2026-09-21)
+
+* **New Part 2A — Regenerate ALBUM SHA512 Checksums.** Rebuilds
+  `ALBUM.sha512sums.txt` for one album folder (hashes every top-level
+  file except the two manifests, matching the SHA-512 Library guide's
+  Step 2 convention). Reports each file as SAME/NEW/CHANGED/REMOVED
+  against the previous manifest; warns on CHANGED so a genuine change
+  is never silently accepted.
+* **New Part 2B — Regenerate ARTIST SHA512 Checksums.** Rebuilds
+  `ARTIST.sha512sums.txt` from all album folders, replicating the
+  SHA-512 Library guide's Step 4 hash-of-hashes algorithm byte-for-byte
+  (verified against the original bash pipeline on a fixture: recursive
+  `find` excluding `ALBUM.sha512sums.txt`, `LC_ALL=C` byte sort,
+  `sha512sum` of the listing). A folder rename shows as REMOVED + NEW
+  with identical hashes; CHANGED flags content changes.
+* **Both scripts are extensionless Python** in `~/.local/bin/`
+  (`regen-album-sha512`, `regen-artist-sha512`) per the no-`.sh`
+  convention, with live per-item progress lines.
+* **Filled a dangling reference:** the moode-cleanup guide's Step 9
+  already told readers to "Re-run ... the 'Regenerate ALBUM/ARTIST
+  Checksum' Nemo action" — those actions did not exist until this
+  version.
+* Guide parts renumbered (2A/2B inserted after Part 2 per the
+  no-renumber convention); Troubleshooting and Backup sections updated;
+  versioned copy of the prior guide archived as
+  `linux-audio-nemo-actions-v3.md` before editing.

@@ -2,17 +2,19 @@
 
 Linux Nemo file manager right-click actions for verifying, tagging, and applying ReplayGain to an audio library from within Nemo. Companion to the SHA-512 checksum and moOde cleanup guides.
 
-**Guide version: v3** — Six Nemo right-click actions (SHA-512 verification, ReplayGain show/apply, tag-mismatch report, tag write). v3 converts the Show ReplayGain script to extensionless Python — all action scripts are now extensionless Python (2026-09-20). v2 added the automated-installation note: OpenCode can install all actions from the guide on request (see the change log).
+**Guide version: v4** — Eight Nemo right-click actions (SHA-512 verification and regeneration, ReplayGain show/apply, tag-mismatch report, tag write). v4 adds **Regenerate ALBUM SHA512 Checksums** and **Regenerate ARTIST SHA512 Checksums** (Parts 2A/2B) for re-certifying after intentional changes such as folder renames (2026-09-21, see the change log). v3 converted the Show ReplayGain script to extensionless Python. v2 added the automated-installation note: OpenCode can install all actions from the guide on request.
 
 * Full guide: [linux-audio-nemo-actions.md](linux-audio-nemo-actions.md)
 * Change log: [linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)
 
 ## Overview
 
-This repository contains a set of six Nemo right-click actions:
+This repository contains a set of eight Nemo right-click actions:
 
 * **Verify ALBUM SHA512 Checksums** — checks individual track files against an `ALBUM.sha512sums.txt` manifest.
 * **Verify ARTIST SHA512 Checksums** — computes a hash-of-hashes across album directories inside an artist folder and compares them against `ARTIST.sha512sums.txt`.
+* **Regenerate ALBUM SHA512 Checksums** — rebuilds `ALBUM.sha512sums.txt` after an intentional change (re-tag, added/removed file); reports SAME/NEW/CHANGED/REMOVED per file.
+* **Regenerate ARTIST SHA512 Checksums** — rebuilds `ARTIST.sha512sums.txt` from all album folders after an intentional change (folder rename, added album); byte-compatible with the whole-library SHA-512 generator.
 * **Show ReplayGain** — displays the current ReplayGain tags of selected files in a popup.
 * **Apply ReplayGain** — applies ReplayGain to a folder: Album + Track gain for FLAC/MP3/OGG/Opus/WAV/AIFF; Track gain only for M4A/MP4 (loudgain's upstream MP4 atom bug, documented in the Recertification guide).
 * **Report Tag/Filename Mismatches** — compares embedded tags against the folder/filename naming convention; the report is written to `~/.logs/linux-audio-nemo-actions/`, never into the music folders.

@@ -1,8 +1,10 @@
 ### linux-audio-nemo-actions
 
-**Version: v3** — Converts the Show ReplayGain action script to
-extensionless Python (`show-replaygain`, no extension); the other five
-actions are unchanged from v2. (Converted 2026-09-20.)
+**Version: v4** — Adds two new actions: Regenerate ALBUM SHA512
+Checksums and Regenerate ARTIST SHA512 Checksums (extensionless Python,
+Parts 2A and 2B) for re-certifying albums/artists after intentional
+changes such as folder renames, re-tags, or added files. (Added
+2026-09-21.)
 
 Change log and version history are maintained separately:
 [linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)
@@ -17,12 +19,14 @@ This guide installs a set of Nemo right-click actions for moOde-aware music libr
 
 Unlike the whole-library guides in this suite (moOde Cleanup and SHA512 Library), these Nemo actions are designed for quick, **Artist- or Album-specific** work. They are invoked by right-clicking on a file or folder in the Nemo file manager and run instantly, without loading a full workflow.
 
-**Shortcut: automated installation.** The manual nano/paste steps in Parts 1–6 describe exactly what to install, but you do not have to do them by hand — **[OpenCode](https://opencode.ai/) can install all of these actions automatically upon request.** Ask it to "install the Nemo actions from the guide" and it will extract every script and `.nemo_action` file from this document into `~/.local/bin/` and `~/.local/share/nemo/actions/` (replacing `<YOURUSERNAME>` placeholders, making scripts executable, and restarting Nemo), then re-verify the installation. It can also uninstall or refresh individual actions on request. This works for any guide in the suite: the guide text is the single source of truth, so an OpenCode-assisted install is always the current version.
+**Shortcut: automated installation.** The manual nano/paste steps in Parts 1–6, 2A and 2B describe exactly what to install, but you do not have to do them by hand — **[OpenCode](https://opencode.ai/) can install all of these actions automatically upon request.** Ask it to "install the Nemo actions from the guide" and it will extract every script and `.nemo_action` file from this document into `~/.local/bin/` and `~/.local/share/nemo/actions/` (replacing `<YOURUSERNAME>` placeholders, making scripts executable, and restarting Nemo), then re-verify the installation. It can also uninstall or refresh individual actions on request. This works for any guide in the suite: the guide text is the single source of truth, so an OpenCode-assisted install is always the current version.
 
 The actions installed here are:
 
 * Verify ALBUM SHA512 Checksums — verifies the individual track files in an album folder.
 * Verify ARTIST SHA512 Checksums — verifies each album directory inside an artist folder.
+* Regenerate ALBUM SHA512 Checksums — rebuilds `ALBUM.sha512sums.txt` for an album folder after an intentional change (re-tag, added/removed file).
+* Regenerate ARTIST SHA512 Checksums — rebuilds `ARTIST.sha512sums.txt` from all album folders after an intentional change (folder rename, added album).
 * Show ReplayGain — displays the current ReplayGain tags of one or more selected audio files.
 * Apply ReplayGain (Loudgain) — computes and writes Album + Track ReplayGain across every supported audio file in a folder.
 * Report Tag/Filename Mismatches — scans a folder and reports every file whose embedded tags disagree with the filename (a check that the moOde display is correct).
@@ -324,7 +328,366 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-06. Part 3 — Show ReplayGain
+06. Part 2A — Regenerate ALBUM SHA512 Checksums
+
+---
+
+Rebuilds `ALBUM.sha512sums.txt` for one album folder. Use this after an **intentional** change to an album's contents: re-tagging, adding or removing a file, replacing a corrupted track with a restored copy. It hashes every top-level file in the folder except the two manifest files, matching the SHA-512 Library guide's Step 2 convention exactly.
+
+The script reports every file as `[SAME]`, `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. **`[CHANGED]` means the file's audio content changed** — if you did not intentionally change it, stop and investigate (possible bit rot or an incomplete copy) instead of accepting the new manifest.
+
+-- Step 1 — Create the regeneration script
+
+--- Bash Script Start ---
+```bash
+
+nano ~/.local/bin/regen-album-sha512
+
+```
+--- Bash Script End ---
+
+-- Step 2 — Paste the script
+
+--- nano Paste Script Start ---
+```python
+
+#!/usr/bin/env python3
+# ============================================================
+# regen-album-sha512 — Regenerate ALBUM.sha512sums.txt
+# Nemo action: right-click ALBUM.sha512sums.txt (or the album
+# folder). Hashes every top-level file except the two manifests,
+# matching the sha512 guide's Step 2 convention.
+# ============================================================
+import hashlib
+import os
+import sys
+
+EXCLUDE = {"ALBUM.sha512sums.txt", "ARTIST.sha512sums.txt"}
+
+
+def sha512_file(path):
+    h = hashlib.sha512()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def load_old(path):
+    old = {}
+    if os.path.isfile(path):
+        with open(path, "r", errors="surrogateescape") as f:
+            for line in f:
+                parts = line.split(None, 1)
+                if len(parts) == 2:
+                    old[parts[1].strip()] = parts[0]
+    return old
+
+
+def main():
+    target = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
+    if os.path.isfile(target):
+        target = os.path.dirname(os.path.abspath(target))
+    if not os.path.isdir(target):
+        print(f"ERROR: not a directory: {target}")
+        return 1
+    os.chdir(target)
+
+    entries = sorted(
+        f for f in os.listdir(".")
+        if os.path.isfile(f) and f not in EXCLUDE
+    )
+    if not entries:
+        print("ALERT: no hashable files in this folder. Nothing written.")
+        return 1
+
+    old = load_old("ALBUM.sha512sums.txt")
+    mode = "UPDATE" if old else "CREATE"
+    label = os.path.basename(os.path.abspath(target))
+    print("=" * 51)
+    print(f" {mode}: ALBUM.sha512sums.txt — {label}")
+    print("=" * 51)
+
+    lines = []
+    changed = added = same = 0
+    total = len(entries)
+    for i, name in enumerate(entries, 1):
+        digest = sha512_file(name)
+        lines.append(f"{digest}  {name}")
+        prev = old.get(name)
+        if prev is None:
+            status, added = "NEW  ", added + 1
+        elif prev != digest:
+            status, changed = "CHANGED", changed + 1
+        else:
+            status, same = "SAME  ", same + 1
+        print(f"[{status}] [{i}/{total}] {name}")
+    for name in old:
+        if name not in entries:
+            print(f"[REMOVED]           {name}")
+
+    tmp = "ALBUM.sha512sums.txt.new"
+    with open(tmp, "w", errors="surrogateescape") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, "ALBUM.sha512sums.txt")
+
+    print(f"\nOK: {total} entries written to ALBUM.sha512sums.txt")
+    print(f"    ({same} unchanged, {added} new, {changed} changed)")
+    if changed:
+        print("NOTE: changed hashes mean the audio changed — if this was")
+        print("not intentional, restore the file from backup instead of")
+        print("regenerating. See the SHA-512 guide's stray/corruption rules.")
+    print("Reminder: the parent ARTIST.sha512sums.txt is now stale —")
+    print("right-click it and choose Regenerate ARTIST SHA512 Checksums.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+```
+--- nano Paste Script End ---
+
+-- Step 3 — Save the script and make it executable
+
+--- Bash Script Start ---
+```bash
+
+chmod +x ~/.local/bin/regen-album-sha512
+
+```
+--- Bash Script End ---
+
+-- Step 4 — Create the action file
+
+--- Bash Script Start ---
+```bash
+
+nano ~/.local/share/nemo/actions/regen-album-sha512.nemo_action
+
+```
+--- Bash Script End ---
+
+-- Step 5 — Paste the action
+
+--- nano Paste Script Start ---
+```ini
+
+[Nemo Action]
+Name=Regenerate ALBUM SHA512 Checksums
+Comment=Rebuild ALBUM.sha512sums.txt for this album folder
+Exec=/home/<YOURUSERNAME>/.local/bin/regen-album-sha512 %F
+Selection=s
+Extensions=txt;
+Conditions=exact-name ALBUM.sha512sums.txt;
+Icon-Name=view-refresh
+Terminal=true
+Active=true
+
+```
+--- nano Paste Script End ---
+
+-- Step 6 — How to use
+
+Right-click the album's `ALBUM.sha512sums.txt` in Nemo → **Regenerate ALBUM SHA512 Checksums**. Review the per-file report, then re-run **Verify ALBUM SHA512 Checksums** (Part 1) to confirm the new manifest verifies clean. Afterwards the parent `ARTIST.sha512sums.txt` is stale — regenerate it too (Part 2B).
+
+\ ---------------------------------------------------------------------------------------
+
+07. Part 2B — Regenerate ARTIST SHA512 Checksums
+
+---
+
+Rebuilds `ARTIST.sha512sums.txt` for one artist folder from all of its album subdirectories. Use this after an **intentional** structural change: renaming an album folder, adding or removing an album, or after Part 2A. The hash-of-hashes algorithm matches the SHA-512 Library guide's Step 4 exactly, so manifests produced here verify against manifests produced by the whole-library run.
+
+The script reports each album as `[SAME]`, `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. A **folder rename** shows as `[REMOVED]` + `[NEW]` with identical hashes — that is expected. **`[CHANGED]` means an album's contents changed** — if that was not intentional, investigate before accepting.
+
+It also flags album folders that have no `ALBUM.sha512sums.txt` (they are still hashed — the artist hash excludes the manifest — but lack the per-file protection layer).
+
+-- Step 1 — Create the regeneration script
+
+--- Bash Script Start ---
+```bash
+
+nano ~/.local/bin/regen-artist-sha512
+
+```
+--- Bash Script End ---
+
+-- Step 2 — Paste the script
+
+--- nano Paste Script Start ---
+```python
+
+#!/usr/bin/env python3
+# ============================================================
+# regen-artist-sha512 — Regenerate ARTIST.sha512sums.txt
+# Nemo action: right-click ARTIST.sha512sums.txt (or the artist
+# folder). Recomputes the hash-of-hashes for every album folder,
+# matching the sha512 guide's Step 4 algorithm byte-for-byte:
+#   find . -type f ! -name ALBUM.sha512sums.txt | LC_ALL=C sort -z
+#   | xargs -0 sha512sum | sha512sum   (first field)
+# ============================================================
+import hashlib
+import os
+import sys
+
+
+def sha512_file(path):
+    h = hashlib.sha512()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def album_hash(album_dir):
+    paths = []
+    for root, dirs, files in os.walk(album_dir):
+        for fn in files:
+            if fn == "ALBUM.sha512sums.txt":
+                continue
+            full = os.path.join(root, fn)
+            rel = "./" + os.path.relpath(full, album_dir)
+            paths.append(rel)
+    paths.sort(key=os.fsencode)
+    h = hashlib.sha512()
+    for rel in paths:
+        fh = sha512_file(os.path.join(album_dir, rel[2:]))
+        h.update(fh.encode() + b"  " + os.fsencode(rel) + b"\n")
+    return h.hexdigest()
+
+
+def load_old(path):
+    old = {}
+    if os.path.isfile(path):
+        with open(path, "r", errors="surrogateescape") as f:
+            for line in f:
+                parts = line.split(None, 1)
+                if len(parts) == 2:
+                    old[parts[1].strip()] = parts[0]
+    return old
+
+
+def main():
+    target = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
+    if os.path.isfile(target):
+        target = os.path.dirname(os.path.abspath(target))
+    if not os.path.isdir(target):
+        print(f"ERROR: not a directory: {target}")
+        return 1
+    os.chdir(target)
+
+    albums = sorted(
+        d for d in os.listdir(".")
+        if os.path.isdir(d) and not d.startswith(".")
+    )
+    if not albums:
+        print("ALERT: no album subdirectories found here. Nothing written.")
+        return 1
+
+    old = load_old("ARTIST.sha512sums.txt")
+    mode = "UPDATE" if old else "CREATE"
+    label = os.path.basename(os.path.abspath(target))
+    print("=" * 51)
+    print(f" {mode}: ARTIST.sha512sums.txt — {label}")
+    print("=" * 51)
+
+    lines = []
+    changed = added = same = 0
+    total = len(albums)
+    for i, album in enumerate(albums, 1):
+        digest = album_hash(album)
+        lines.append(f"{digest}  {album}")
+        prev = old.get(album)
+        if prev is None:
+            status, added = "NEW  ", added + 1
+        elif prev != digest:
+            status, changed = "CHANGED", changed + 1
+        else:
+            status, same = "SAME  ", same + 1
+        print(f"[{status}] [{i}/{total}] {album}")
+    for name in old:
+        if name not in albums:
+            print(f"[REMOVED]           {name}")
+
+    missing = [
+        a for a in albums if not os.path.isfile(os.path.join(a, "ALBUM.sha512sums.txt"))
+    ]
+    if missing:
+        print("\nNOTE: album folder(s) with no ALBUM.sha512sums.txt:")
+        for a in missing:
+            print(f"  {a}")
+        print("They are still hashed (the artist hash excludes the manifest),")
+        print("but they are not protected at the per-file layer. Consider")
+        print("regenerating the album manifest for them too.")
+
+    tmp = "ARTIST.sha512sums.txt.new"
+    with open(tmp, "w", errors="surrogateescape") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, "ARTIST.sha512sums.txt")
+
+    print(f"\nOK: {total} album entries written to ARTIST.sha512sums.txt")
+    print(f"    ({same} unchanged, {added} new, {changed} changed)")
+    if changed:
+        print("NOTE: a changed album hash means that album's contents changed")
+        print("(rename, re-tag, added/removed file). If nothing was supposed")
+        print("to change, investigate before accepting — do not blindly")
+        print("regenerate to silence a MISMATCH.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
+```
+--- nano Paste Script End ---
+
+-- Step 3 — Save the script and make it executable
+
+--- Bash Script Start ---
+```bash
+
+chmod +x ~/.local/bin/regen-artist-sha512
+
+```
+--- Bash Script End ---
+
+-- Step 4 — Create the action file
+
+--- Bash Script Start ---
+```bash
+
+nano ~/.local/share/nemo/actions/regen-artist-sha512.nemo_action
+
+```
+--- Bash Script End ---
+
+-- Step 5 — Paste the action
+
+--- nano Paste Script Start ---
+```ini
+
+[Nemo Action]
+Name=Regenerate ARTIST SHA512 Checksums
+Comment=Rebuild ARTIST.sha512sums.txt from all album folders
+Exec=/home/<YOURUSERNAME>/.local/bin/regen-artist-sha512 %F
+Selection=s
+Extensions=txt;
+Conditions=exact-name ARTIST.sha512sums.txt;
+Icon-Name=view-refresh
+Terminal=true
+Active=true
+
+```
+--- nano Paste Script End ---
+
+-- Step 6 — How to use
+
+Right-click the artist's `ARTIST.sha512sums.txt` in Nemo → **Regenerate ARTIST SHA512 Checksums**. Review the per-album report, then re-run **Verify ARTIST SHA512 Checksums** (Part 2) to confirm the new manifest verifies clean.
+
+\ ---------------------------------------------------------------------------------------
+
+08. Part 3 — Show ReplayGain
 
 ---
 
@@ -509,7 +872,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-07. Part 4 — Apply ReplayGain (Loudgain)
+09. Part 4 — Apply ReplayGain (Loudgain)
 
 ---
 
@@ -673,7 +1036,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-08. Part 5 — Report Tag/Filename Mismatches
+10. Part 5 — Report Tag/Filename Mismatches
 
 ---
 
@@ -853,7 +1216,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-09. Part 6 — Write Tags from Folder/File Names
+11. Part 6 — Write Tags from Folder/File Names
 
 ---
 
@@ -1077,7 +1440,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-10. Part 7 — Restart Nemo
+12. Part 7 — Restart Nemo
 
 ---
 
@@ -1091,7 +1454,7 @@ nemo -q
 
 ---
 
-11. Part 8 — Testing
+13. Part 8 — Testing
 
 ---
 
@@ -1132,7 +1495,7 @@ OK  AlbumName
 
 ---
 
-12. Checksum File Formats
+14. Checksum File Formats
 
 ---
 
@@ -1148,7 +1511,7 @@ The album name is a directory, not a file — the artist script computes a hash-
 
 ---
 
-13. File Locations
+15. File Locations
 
 ---
 
@@ -1163,7 +1526,7 @@ The SHA512 scripts require `$1` because Nemo launches actions from an unknown wo
 
 ---
 
-14. Troubleshooting
+16. Troubleshooting
 
 ---
 
@@ -1175,7 +1538,7 @@ The SHA512 scripts require `$1` because Nemo launches actions from an unknown wo
 
 2. "MISSING ALBUM.sha512sums.txt" or "MISSING ARTIST.sha512sums.txt".
 
-The manifest has not been created in that folder. Run the checksum generation step from the Recertification or SHA512 Library guide first.
+The manifest has not been created in that folder. Regenerate it with the **Regenerate ALBUM/ARTIST SHA512 Checksums** actions (Parts 2A/2B), or run the checksum generation step from the Recertification or SHA512 Library guide.
 
 3. An album/artist shows MISMATCH.
 
@@ -1187,7 +1550,7 @@ Confirm loudgain is installed and the `Dependencies=loudgain;` line is present. 
 
 ---
 
-15. Backup
+17. Backup
 
 ---
 
@@ -1195,12 +1558,16 @@ Keep copies of:
 
 * ~/.local/bin/verify-album-sha512
 * ~/.local/bin/verify-artist-sha512
+* ~/.local/bin/regen-album-sha512
+* ~/.local/bin/regen-artist-sha512
 * ~/.local/bin/show-replaygain
 * ~/.local/bin/apply-replaygain-folder
 * ~/.local/bin/report-tag-mismatches
 * ~/.local/bin/write-tags-from-names
 * ~/.local/share/nemo/actions/verify-album-sha512.nemo_action
 * ~/.local/share/nemo/actions/verify-artist-sha512.nemo_action
+* ~/.local/share/nemo/actions/regen-album-sha512.nemo_action
+* ~/.local/share/nemo/actions/regen-artist-sha512.nemo_action
 * ~/.local/share/nemo/actions/show-replaygain.nemo_action
 * ~/.local/share/nemo/actions/apply-replaygain-folder.nemo_action
 * ~/.local/share/nemo/actions/report-tag-mismatches.nemo_action
@@ -1208,7 +1575,7 @@ Keep copies of:
 
 ---
 
-16. Restore from Backup
+18. Restore from Backup
 
 ---
 
