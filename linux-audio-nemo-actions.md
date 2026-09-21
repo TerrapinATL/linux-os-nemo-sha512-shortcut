@@ -1,10 +1,9 @@
 ### linux-audio-nemo-actions
 
-**Version: v4** — Adds two new actions: Regenerate ALBUM SHA512
-Checksums and Regenerate ARTIST SHA512 Checksums (extensionless Python,
-Parts 2A and 2B) for re-certifying albums/artists after intentional
-changes such as folder renames, re-tags, or added files. (Added
-2026-09-21.)
+**Version: v5** — Regenerate-action report labels refined: an entry
+whose checksum already existed under a different name (a folder or file
+rename) now reports **[UPDATED]** instead of [NEW]; [NEW] is reserved
+for genuinely new checksum values. (Refined 2026-09-21.)
 
 Change log and version history are maintained separately:
 [linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)
@@ -334,7 +333,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 Rebuilds `ALBUM.sha512sums.txt` for one album folder. Use this after an **intentional** change to an album's contents: re-tagging, adding or removing a file, replacing a corrupted track with a restored copy. It hashes every top-level file in the folder except the two manifest files, matching the SHA-512 Library guide's Step 2 convention exactly.
 
-The script reports every file as `[SAME]`, `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. **`[CHANGED]` means the file's audio content changed** — if you did not intentionally change it, stop and investigate (possible bit rot or an incomplete copy) instead of accepting the new manifest.
+The script reports every file as `[SAME]`, `[UPDATED]` (checksum unchanged, name changed — a rename), `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. **`[CHANGED]` means the file's audio content changed** — if you did not intentionally change it, stop and investigate (possible bit rot or an incomplete copy) instead of accepting the new manifest.
 
 -- Step 1 — Create the regeneration script
 
@@ -402,6 +401,9 @@ def main():
         return 1
 
     old = load_old("ALBUM.sha512sums.txt")
+    old_by_hash = {}
+    for n, h in old.items():
+        old_by_hash.setdefault(h, n)
     mode = "UPDATE" if old else "CREATE"
     label = os.path.basename(os.path.abspath(target))
     print("=" * 51)
@@ -409,22 +411,24 @@ def main():
     print("=" * 51)
 
     lines = []
-    changed = added = same = 0
+    changed = added = updated = same = 0
     total = len(entries)
     for i, name in enumerate(entries, 1):
         digest = sha512_file(name)
         lines.append(f"{digest}  {name}")
         prev = old.get(name)
-        if prev is None:
-            status, added = "NEW  ", added + 1
-        elif prev != digest:
+        if prev == digest:
+            status, same = "SAME   ", same + 1
+        elif prev is not None:
             status, changed = "CHANGED", changed + 1
+        elif digest in old_by_hash:
+            status, updated = "UPDATED", updated + 1
         else:
-            status, same = "SAME  ", same + 1
+            status, added = "NEW    ", added + 1
         print(f"[{status}] [{i}/{total}] {name}")
     for name in old:
         if name not in entries:
-            print(f"[REMOVED]           {name}")
+            print(f"[REMOVED]            {name}")
 
     tmp = "ALBUM.sha512sums.txt.new"
     with open(tmp, "w", errors="surrogateescape") as f:
@@ -432,7 +436,7 @@ def main():
     os.replace(tmp, "ALBUM.sha512sums.txt")
 
     print(f"\nOK: {total} entries written to ALBUM.sha512sums.txt")
-    print(f"    ({same} unchanged, {added} new, {changed} changed)")
+    print(f"    ({same} unchanged, {updated} renamed, {added} new, {changed} changed)")
     if changed:
         print("NOTE: changed hashes mean the audio changed — if this was")
         print("not intentional, restore the file from backup instead of")
@@ -444,7 +448,6 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
 ```
 --- nano Paste Script End ---
 
@@ -499,7 +502,7 @@ Right-click the album's `ALBUM.sha512sums.txt` in Nemo → **Regenerate ALBUM SH
 
 Rebuilds `ARTIST.sha512sums.txt` for one artist folder from all of its album subdirectories. Use this after an **intentional** structural change: renaming an album folder, adding or removing an album, or after Part 2A. The hash-of-hashes algorithm matches the SHA-512 Library guide's Step 4 exactly, so manifests produced here verify against manifests produced by the whole-library run.
 
-The script reports each album as `[SAME]`, `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. A **folder rename** shows as `[REMOVED]` + `[NEW]` with identical hashes — that is expected. **`[CHANGED]` means an album's contents changed** — if that was not intentional, investigate before accepting.
+The script reports each album as `[SAME]`, `[UPDATED]`, `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. A **folder rename** shows as `[UPDATED]` (same hash, new folder name) plus `[REMOVED]` for the old name — that is expected. **`[CHANGED]` means an album's contents changed** — if that was not intentional, investigate before accepting.
 
 It also flags album folders that have no `ALBUM.sha512sums.txt` (they are still hashed — the artist hash excludes the manifest — but lack the per-file protection layer).
 
@@ -586,6 +589,9 @@ def main():
         return 1
 
     old = load_old("ARTIST.sha512sums.txt")
+    old_by_hash = {}
+    for n, h in old.items():
+        old_by_hash.setdefault(h, n)
     mode = "UPDATE" if old else "CREATE"
     label = os.path.basename(os.path.abspath(target))
     print("=" * 51)
@@ -593,22 +599,24 @@ def main():
     print("=" * 51)
 
     lines = []
-    changed = added = same = 0
+    changed = added = updated = same = 0
     total = len(albums)
     for i, album in enumerate(albums, 1):
         digest = album_hash(album)
         lines.append(f"{digest}  {album}")
         prev = old.get(album)
-        if prev is None:
-            status, added = "NEW  ", added + 1
-        elif prev != digest:
+        if prev == digest:
+            status, same = "SAME   ", same + 1
+        elif prev is not None:
             status, changed = "CHANGED", changed + 1
+        elif digest in old_by_hash:
+            status, updated = "UPDATED", updated + 1
         else:
-            status, same = "SAME  ", same + 1
+            status, added = "NEW    ", added + 1
         print(f"[{status}] [{i}/{total}] {album}")
     for name in old:
         if name not in albums:
-            print(f"[REMOVED]           {name}")
+            print(f"[REMOVED]            {name}")
 
     missing = [
         a for a in albums if not os.path.isfile(os.path.join(a, "ALBUM.sha512sums.txt"))
@@ -627,7 +635,7 @@ def main():
     os.replace(tmp, "ARTIST.sha512sums.txt")
 
     print(f"\nOK: {total} album entries written to ARTIST.sha512sums.txt")
-    print(f"    ({same} unchanged, {added} new, {changed} changed)")
+    print(f"    ({same} unchanged, {updated} renamed, {added} new, {changed} changed)")
     if changed:
         print("NOTE: a changed album hash means that album's contents changed")
         print("(rename, re-tag, added/removed file). If nothing was supposed")
@@ -638,7 +646,6 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
 ```
 --- nano Paste Script End ---
 

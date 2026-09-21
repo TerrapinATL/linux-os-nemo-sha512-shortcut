@@ -2,7 +2,7 @@
 
 Linux Nemo file manager right-click actions for verifying, tagging, and applying ReplayGain to an audio library from within Nemo. Companion to the SHA-512 checksum and moOde cleanup guides.
 
-**Guide version: v4** — Eight Nemo right-click actions (SHA-512 verification and regeneration, ReplayGain show/apply, tag-mismatch report, tag write). v4 adds **Regenerate ALBUM SHA512 Checksums** and **Regenerate ARTIST SHA512 Checksums** (Parts 2A/2B) for re-certifying after intentional changes such as folder renames (2026-09-21, see the change log). v3 converted the Show ReplayGain script to extensionless Python. v2 added the automated-installation note: OpenCode can install all actions from the guide on request.
+**Guide version: v5** — Eight Nemo right-click actions (SHA-512 verification and regeneration, ReplayGain show/apply, tag-mismatch report, tag write). v4 added **Regenerate ALBUM SHA512 Checksums** and **Regenerate ARTIST SHA512 Checksums** (Parts 2A/2B) for re-certifying after intentional changes such as folder renames; v5 refined the report labels so a rename reports [UPDATED] rather than [NEW] (2026-09-21, see the change log). v3 converted the Show ReplayGain script to extensionless Python. v2 added the automated-installation note: OpenCode can install all actions from the guide on request.
 
 * Full guide: [linux-audio-nemo-actions.md](linux-audio-nemo-actions.md)
 * Change log: [linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)

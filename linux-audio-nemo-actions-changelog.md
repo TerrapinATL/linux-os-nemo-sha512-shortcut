@@ -120,3 +120,18 @@ Review corrections applied 2026-09-14:
   no-renumber convention); Troubleshooting and Backup sections updated;
   versioned copy of the prior guide archived as
   `linux-audio-nemo-actions-v3.md` before editing.
+
+## v5 Change Log (2026-09-21)
+
+* **Report labels refined in Parts 2A/2B.** An entry whose checksum
+  already existed under a different name — a folder or file rename —
+  previously reported as [NEW] + [REMOVED], which wrongly implied new
+  data. It now reports **[UPDATED]** (checksum unchanged, name changed),
+  reserving [NEW] for genuinely new checksum values. Full label set:
+  SAME / UPDATED / NEW / CHANGED / REMOVED; summary line counts
+  unchanged / renamed / new / changed.
+* Both embedded scripts and the installed `~/.local/bin/` copies updated
+  together (byte-identical); rename, content-change and new-album
+  scenarios re-tested on a fixture.
+* **Versioned copy** — the prior guide (v4) was archived as
+  `linux-audio-nemo-actions-v4.md` before editing, per the update rule.
