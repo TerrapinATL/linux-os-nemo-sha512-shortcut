@@ -135,3 +135,15 @@ Review corrections applied 2026-09-14:
   scenarios re-tested on a fixture.
 * **Versioned copy** — the prior guide (v4) was archived as
   `linux-audio-nemo-actions-v4.md` before editing, per the update rule.
+
+## v6 Change Log (2026-09-21)
+
+* **Press-Enter prompt added to the Regenerate actions** (Parts 2A/2B),
+  matching the Verify actions: the report window now stays open until
+  the user presses Enter, instead of closing the instant the script
+  finishes. The prompt is skipped when stdin is not a terminal (e.g.
+  piping output to a file), so automated use is unaffected.
+* Embedded guide scripts and installed `~/.local/bin/` copies updated
+  together (byte-identical).
+* **Versioned copy** — the prior guide (v5) was archived as
+  `linux-audio-nemo-actions-v5.md` before editing, per the update rule.

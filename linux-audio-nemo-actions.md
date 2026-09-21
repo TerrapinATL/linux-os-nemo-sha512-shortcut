@@ -1,9 +1,10 @@
 ### linux-audio-nemo-actions
 
-**Version: v5** — Regenerate-action report labels refined: an entry
-whose checksum already existed under a different name (a folder or file
-rename) now reports **[UPDATED]** instead of [NEW]; [NEW] is reserved
-for genuinely new checksum values. (Refined 2026-09-21.)
+**Version: v6** — The Regenerate actions now end with a
+"Press Enter to close" prompt (matching the Verify actions), so the
+report stays readable in the Nemo terminal window instead of vanishing
+when the script exits. The prompt is skipped when output is piped.
+(Refined 2026-09-21.)
 
 Change log and version history are maintained separately:
 [linux-audio-nemo-actions-changelog.md](linux-audio-nemo-actions-changelog.md)
@@ -443,6 +444,11 @@ def main():
         print("regenerating. See the SHA-512 guide's stray/corruption rules.")
     print("Reminder: the parent ARTIST.sha512sums.txt is now stale —")
     print("right-click it and choose Regenerate ARTIST SHA512 Checksums.")
+    if sys.stdin.isatty():
+        try:
+            input("\nPress Enter to close...")
+        except EOFError:
+            pass
     return 0
 
 
@@ -641,6 +647,11 @@ def main():
         print("(rename, re-tag, added/removed file). If nothing was supposed")
         print("to change, investigate before accepting — do not blindly")
         print("regenerate to silence a MISMATCH.")
+    if sys.stdin.isatty():
+        try:
+            input("\nPress Enter to close...")
+        except EOFError:
+            pass
     return 0
 
 
