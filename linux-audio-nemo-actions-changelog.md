@@ -4,36 +4,11 @@ All version changes are appended to this file, newest last, one `## vX Change Lo
 
 **Update rule:** before writing to the version-less main guide file, the current content must first be saved as a versioned copy (e.g. `linux-audio-nemo-actions-v1.md`) so every published version stays retrievable.
 
-**Current version: v3** — converts the Show ReplayGain action's script
-from bash to extensionless Python (see the v3 entry below).
+**Current version: v8** — manifest convention change: the SHA-512
+generation/verification actions hash AUDIO FILES ONLY (see the v8 entry
+below).
 
 Main guide: [linux-audio-nemo-actions.md](linux-audio-nemo-actions.md)
-
----
-
-## Pre-merge lineage — nemo-sha512-actions v1–v4 (recovered summary)
-
-The repository's first published guide (Jul 2026) was
-`nemo-sha512-actions`: a two-action guide adding right-click
-**Verify ALBUM SHA512** and **Verify ARTIST SHA512** to the Nemo menu for
-FLAC library checksums. No per-version change log was recorded for its
-v1–v4. This summary was reconstructed (2026-09-26) from the archived
-local guide copies (v1–v4) and the repository commit history:
-
-* **v1** (Jul 23, 2026) — the two verification actions; scripts installed
-  to `~/.local/bin/`, actions to `~/.local/share/nemo/actions/`; exact
-  `ARTIST.sha512sums.txt` / `ALBUM.sha512sums.txt` naming convention
-  required for the actions to locate manifests.
-* **v2–v3** (Aug 3) — script naming refined (`verify-sha512` renamed
-  `verify-album-sha512`), output formatting cleaned up, line-buffered
-  verification output (`stdbuf -oL`) so progress streams live in the
-  Nemo terminal window.
-* **v4** — Press-Enter close conventions and formatting aligned with the
-  suite's other guides.
-* **Retired 2026-08-30** — when the merged **linux-audio-nemo-actions**
-  guide (v1 below) combined the SHA-512 verification actions with the
-  ReplayGain and tag actions into a single guide. Archived copies of the
-  legacy guide live in the local `nemo-sha512-actions/` archive.
 
 ---
 
@@ -173,3 +148,44 @@ Review corrections applied 2026-09-14:
   together (byte-identical).
 * **Versioned copy** — the prior guide (v5) was archived as
   `linux-audio-nemo-actions-v5.md` before editing, per the update rule.
+
+## v7 Change Log (2026-09-26)
+
+* **New Part 1A — FLAC Integrity Test (flac -t)** — a ninth right-click
+  action. Recursively runs `flac -t` (decode test) on every FLAC file
+  under a selected folder and prints a per-file `OK/FAIL [n/total]`
+  report with a final Scanned/Passed/Failed tally. Same check as Step 1
+  of the Recertification guide, invoked on demand from Nemo; read-only,
+  no manifests touched, `Ignore/` folders excluded per suite convention.
+  Works on both album and artist folders (recursive); right-clicking a
+  single FLAC file tests that file by itself. Placed with the
+  verification actions (after Part 1), following the 2A/2B insertion
+  precedent so existing part numbers are unchanged.
+* **Selection scoping (`%F`, not `%P`)** — the action passes the
+  highlighted item itself, so an album folder scans that album only,
+  never its parent or sibling albums. An artist folder scans all its
+  albums; a single FLAC file is tested individually. (`%P` would have
+  passed the enclosing folder, sweeping in siblings when an album was
+  highlighted.)
+* The action reports through the terminal only (suite convention for
+  spot-check actions — no log files).
+* Embedded guide scripts and installed `~/.local/bin/` copies updated
+  together (byte-identical).
+* **Versioned copy** — the prior guide (v6) was archived as
+  `linux-audio-nemo-actions-v6.md` before editing, per the update rule.
+
+## v8 Change Log (2026-09-26)
+
+* **Manifest convention change: audio files only.** Regenerate ALBUM
+  (Part 2A), Regenerate ARTIST (Part 2B), and Verify ARTIST (Part 2)
+  now select AUDIO FILES ONLY (flac, mp3, m4a, mp4, ogg, opus, wav,
+  aiff, aif, aac, alac, ape, wv, spx, dsf) — cover art, `.mpdignore`,
+  and other non-audio files are excluded from manifests and from the
+  artist digest, matching the SHA-512 guide's v16 convention. Artwork
+  changes no longer invalidate artist manifests.
+* Verify ALBUM (Part 1) is unchanged: `sha512sum -c` verifies whatever
+  the manifest lists.
+* Installed `~/.local/bin/` copies updated together (byte-identical with
+  the embedded scripts, verified).
+* **Versioned copy** — the prior guide (v7) was archived as
+  `linux-audio-nemo-actions-v7.md` before editing, per the update rule.

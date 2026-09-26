@@ -1,6 +1,18 @@
 ### linux-audio-nemo-actions
 
-**Version: v6** — The Regenerate actions now end with a
+**Version: v8** — Manifest convention change: the Regenerate ALBUM and
+Regenerate ARTIST actions (Parts 2A/2B) and the Verify ARTIST action
+(Part 2) now hash **AUDIO FILES ONLY** — cover art and other non-audio
+files are excluded, matching the SHA-512 guide's v16 convention.
+Supersedes v7. (2026-09-26.)
+
+Previous v7 — Adds Part 1A: **FLAC Integrity Test (flac -t)**, a
+right-click action that recursively runs `flac -t` on every FLAC file
+under a selected folder and reports a per-file OK/FAIL tally, matching
+the Recertification guide's Step 1. The suite now has nine actions.
+(Added 2026-09-26.)
+
+Previous v6 — The Regenerate actions now end with a
 "Press Enter to close" prompt (matching the Verify actions), so the
 report stays readable in the Nemo terminal window instead of vanishing
 when the script exits. The prompt is skipped when output is piped.
@@ -24,6 +36,7 @@ Unlike the whole-library guides in this suite (moOde Cleanup and SHA512 Library)
 The actions installed here are:
 
 * Verify ALBUM SHA512 Checksums — verifies the individual track files in an album folder.
+* FLAC Integrity Test (flac -t) — recursively tests every FLAC file under a folder for corruption and reports a per-file OK/FAIL tally.
 * Verify ARTIST SHA512 Checksums — verifies each album directory inside an artist folder.
 * Regenerate ALBUM SHA512 Checksums — rebuilds `ALBUM.sha512sums.txt` for an album folder after an intentional change (re-tag, added/removed file).
 * Regenerate ARTIST SHA512 Checksums — rebuilds `ARTIST.sha512sums.txt` from all album folders after an intentional change (folder rename, added album).
@@ -198,6 +211,189 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
+04A. Part 1A — FLAC Integrity Test (flac -t)
+
+---
+
+The FLAC integrity action recursively runs `flac -t` (decode test) on every FLAC file beneath a selected folder and reports a per-file OK/FAIL tally. It performs the same check as Step 1 of the Recertification guide, but on demand from Nemo — useful for spot-checking an album or a whole artist folder after a copy, restore, or drive sync, without touching any checksum manifests. It never modifies files.
+
+**Only the selected folder is scanned.** The action passes the highlighted item itself (`%F`), so highlighting an album folder tests just that album — never its parent or siblings. To scan an entire artist, highlight the artist folder; to scan a single album, highlight the album. A highlighted FLAC file is tested individually.
+
+The test is recursive within the selected folder. `Ignore/` subfolders are excluded, matching the suite convention.
+
+-- Step 1 — Create the script
+
+--- Bash Script Start ---
+```bash
+
+nano ~/.local/bin/flac-integrity-test
+
+```
+--- Bash Script End ---
+
+-- Step 2 — Paste the script
+
+--- nano Paste Script Start ---
+```bash
+
+#!/bin/bash
+# FLAC Integrity Test (flac -t).
+# Called from a Nemo Action (see flac-integrity-test.nemo_action).
+#
+# Tests ONLY the items passed in:
+#   - a highlighted folder is scanned recursively (that folder only;
+#     Ignore/ excluded, per suite convention)
+#   - a highlighted FLAC file is tested individually
+
+echo "==================================================="
+echo " FLAC Integrity Test (flac -t)"
+echo "==================================================="
+echo
+
+if ! command -v flac >/dev/null 2>&1; then
+    echo "ERROR: flac was not found."
+    echo "Install it with: sudo apt install flac"
+    echo
+    read -rp "Press Enter to close..."
+    exit 1
+fi
+
+# Nemo normally passes paths; fall back to the current directory when
+# the script is launched bare from a terminal.
+if [ $# -eq 0 ]; then
+    set -- "$(pwd)"
+fi
+
+grand_passed=0
+grand_failed=0
+grand_total=0
+
+for target in "$@"; do
+    i=0
+    passed=0
+    failed=0
+
+    if [ -d "$target" ]; then
+        mapfile -d '' files < <(
+            find "$target" -type f ! -ipath '*/Ignore/*' -iname "*.flac" -print0 |
+            LC_ALL=C sort -z -V
+        )
+        total=${#files[@]}
+
+        echo "── $target ──"
+
+        if [ "$total" -eq 0 ]; then
+            echo "No FLAC files found."
+            echo
+            continue
+        fi
+
+        echo "Testing $total FLAC file(s)..."
+        echo
+
+        for file in "${files[@]}"; do
+            i=$((i + 1))
+            rel="${file#"$target"/}"
+            if flac -s -t -- "$file" >/dev/null 2>&1; then
+                passed=$((passed + 1))
+                echo "OK   [$i/$total] $rel"
+            else
+                failed=$((failed + 1))
+                echo "FAIL [$i/$total] $rel"
+            fi
+        done
+        echo
+
+    elif [ -f "$target" ]; then
+        case "${target,,}" in
+            *.flac)
+                echo "── $target ──"
+                if flac -s -t -- "$target" >/dev/null 2>&1; then
+                    passed=1
+                    echo "OK   [1/1] $(basename "$target")"
+                else
+                    failed=1
+                    echo "FAIL [1/1] $(basename "$target")"
+                fi
+                echo
+                ;;
+        esac
+    else
+        echo "Skipped (not found): $target"
+        echo
+    fi
+
+    grand_total=$((grand_total + passed + failed))
+    grand_passed=$((grand_passed + passed))
+    grand_failed=$((grand_failed + failed))
+done
+
+echo "----------------------------------------"
+echo "Scanned: $grand_total  Passed: $grand_passed  Failed: $grand_failed"
+echo "----------------------------------------"
+echo
+echo "FLAC Integrity Test Complete."
+echo
+read -rp "Press Enter to close..."
+
+if [ "$grand_failed" -ne 0 ]; then
+    exit 1
+fi
+
+```
+--- nano Paste Script End ---
+
+-- Step 3 — Save the script
+
+In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
+
+-- Step 4 — Make it executable
+
+--- Bash Script Start ---
+```bash
+
+chmod +x ~/.local/bin/flac-integrity-test
+
+```
+--- Bash Script End ---
+
+-- Step 5 — Create the action file
+
+--- Bash Script Start ---
+```bash
+
+nano ~/.local/share/nemo/actions/flac-integrity-test.nemo_action
+
+```
+--- Bash Script End ---
+
+-- Step 6 — Paste the action
+
+--- nano Paste Script Start ---
+```ini
+
+[Nemo Action]
+Name=FLAC Integrity Test (flac -t)
+Comment=Recursively test every FLAC file under the selected folder only
+Exec=/home/<YOURUSERNAME>/.local/bin/flac-integrity-test %F
+Selection=notnone
+Extensions=dir;flac;
+Icon-Name=audio-x-generic
+Terminal=true
+Active=true
+Dependencies=flac;
+
+```
+--- nano Paste Script End ---
+
+Note: `%F` passes the selected item itself, so the scan is scoped to exactly what you highlighted — an album folder scans that album only, an artist folder scans all its albums, and a single FLAC file is tested by itself. (`%P` is deliberately not used here: it passes the enclosing folder, which would sweep in sibling albums when an album is highlighted.)
+
+-- Step 7 — Save
+
+In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
+
+---
+
 05. Part 2 — Verify ARTIST SHA512 Checksums
 
 ---
@@ -253,7 +449,11 @@ if [ -f "ARTIST.sha512sums.txt" ]; then
 
         actual_hash=$(
             cd "$album" &&
-            find . -type f ! -name "ALBUM.sha512sums.txt" -print0 |
+            find . -type f ! -name "ALBUM.sha512sums.txt" \
+            \( -iname "*.flac" -o -iname "*.mp3" -o -iname "*.m4a" -o -iname "*.mp4" \
+               -o -iname "*.ogg" -o -iname "*.opus" -o -iname "*.wav" -o -iname "*.aiff" \
+               -o -iname "*.aif" -o -iname "*.aac" -o -iname "*.alac" -o -iname "*.ape" \
+               -o -iname "*.wv" -o -iname "*.spx" -o -iname "*.dsf" \) -print0 |
             LC_ALL=C sort -z |
             xargs -0 sha512sum |
             sha512sum |
@@ -332,7 +532,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-Rebuilds `ALBUM.sha512sums.txt` for one album folder. Use this after an **intentional** change to an album's contents: re-tagging, adding or removing a file, replacing a corrupted track with a restored copy. It hashes every top-level file in the folder except the two manifest files, matching the SHA-512 Library guide's Step 2 convention exactly.
+Rebuilds `ALBUM.sha512sums.txt` for one album folder. Use this after an **intentional** change to an album's contents: re-tagging, adding or removing a file, replacing a corrupted track with a restored copy. It hashes AUDIO FILES ONLY in the folder (cover art and other non-audio files are excluded), matching the SHA-512 Library guide's v16 convention exactly.
 
 The script reports every file as `[SAME]`, `[UPDATED]` (checksum unchanged, name changed — a rename), `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. **`[CHANGED]` means the file's audio content changed** — if you did not intentionally change it, stop and investigate (possible bit rot or an incomplete copy) instead of accepting the new manifest.
 
@@ -362,8 +562,13 @@ import hashlib
 import os
 import sys
 
+AUDIO_EXTS = {".flac", ".mp3", ".m4a", ".mp4", ".ogg", ".opus", ".wav",
+              ".aiff", ".aif", ".aac", ".alac", ".ape", ".wv", ".spx", ".dsf"}
 EXCLUDE = {"ALBUM.sha512sums.txt", "ARTIST.sha512sums.txt"}
 
+
+def is_audio(fn):
+    return os.path.splitext(fn)[1].lower() in AUDIO_EXTS
 
 def sha512_file(path):
     h = hashlib.sha512()
@@ -395,7 +600,7 @@ def main():
 
     entries = sorted(
         f for f in os.listdir(".")
-        if os.path.isfile(f) and f not in EXCLUDE
+        if os.path.isfile(f) and f not in EXCLUDE and is_audio(f)
     )
     if not entries:
         print("ALERT: no hashable files in this folder. Nothing written.")
@@ -510,7 +715,7 @@ Rebuilds `ARTIST.sha512sums.txt` for one artist folder from all of its album sub
 
 The script reports each album as `[SAME]`, `[UPDATED]`, `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. A **folder rename** shows as `[UPDATED]` (same hash, new folder name) plus `[REMOVED]` for the old name — that is expected. **`[CHANGED]` means an album's contents changed** — if that was not intentional, investigate before accepting.
 
-It also flags album folders that have no `ALBUM.sha512sums.txt` (they are still hashed — the artist hash excludes the manifest — but lack the per-file protection layer).
+It also flags album folders that have no `ALBUM.sha512sums.txt` (they are still hashed over their audio files — the artist digest is audio-only per the v16 convention — but lack the per-file protection layer).
 
 -- Step 1 — Create the regeneration script
 
@@ -533,7 +738,8 @@ nano ~/.local/bin/regen-artist-sha512
 # Nemo action: right-click ARTIST.sha512sums.txt (or the artist
 # folder). Recomputes the hash-of-hashes for every album folder,
 # matching the sha512 guide's Step 4 algorithm byte-for-byte:
-#   find . -type f ! -name ALBUM.sha512sums.txt | LC_ALL=C sort -z
+#   find . -type f ! -name ALBUM.sha512sums.txt (audio extensions only)
+#   | LC_ALL=C sort -z
 #   | xargs -0 sha512sum | sha512sum   (first field)
 # ============================================================
 import hashlib
@@ -549,11 +755,19 @@ def sha512_file(path):
     return h.hexdigest()
 
 
+AUDIO_EXTS = {".flac", ".mp3", ".m4a", ".mp4", ".ogg", ".opus", ".wav",
+              ".aiff", ".aif", ".aac", ".alac", ".ape", ".wv", ".spx", ".dsf"}
+
+
+def is_audio(fn):
+    return os.path.splitext(fn)[1].lower() in AUDIO_EXTS
+
+
 def album_hash(album_dir):
     paths = []
     for root, dirs, files in os.walk(album_dir):
         for fn in files:
-            if fn == "ALBUM.sha512sums.txt":
+            if fn == "ALBUM.sha512sums.txt" or not is_audio(fn):
                 continue
             full = os.path.join(root, fn)
             rel = "./" + os.path.relpath(full, album_dir)
@@ -1503,6 +1717,12 @@ OK  AlbumName
      1. Select one or more FLAC/MP3/M4A files
      2. Right-click → Show ReplayGain
      3. Expect a popup listing track/album gain and peak values
+
+-- Test FLAC Integrity:
+
+     1. Right-click an album folder containing FLAC files → FLAC Integrity Test (flac -t)
+     2. Expect `OK [n/total]` per file and `Scanned: n  Passed: n  Failed: 0`
+     3. Right-click an artist folder to confirm the recursive scan covers all albums
 
 -- Test Apply ReplayGain:
 
