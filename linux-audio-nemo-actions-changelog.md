@@ -11,6 +11,32 @@ Main guide: [linux-audio-nemo-actions.md](linux-audio-nemo-actions.md)
 
 ---
 
+## Pre-merge lineage — nemo-sha512-actions v1–v4 (recovered summary)
+
+The repository's first published guide (Jul 2026) was
+`nemo-sha512-actions`: a two-action guide adding right-click
+**Verify ALBUM SHA512** and **Verify ARTIST SHA512** to the Nemo menu for
+FLAC library checksums. No per-version change log was recorded for its
+v1–v4. This summary was reconstructed (2026-09-26) from the archived
+local guide copies (v1–v4) and the repository commit history:
+
+* **v1** (Jul 23, 2026) — the two verification actions; scripts installed
+  to `~/.local/bin/`, actions to `~/.local/share/nemo/actions/`; exact
+  `ARTIST.sha512sums.txt` / `ALBUM.sha512sums.txt` naming convention
+  required for the actions to locate manifests.
+* **v2–v3** (Aug 3) — script naming refined (`verify-sha512` renamed
+  `verify-album-sha512`), output formatting cleaned up, line-buffered
+  verification output (`stdbuf -oL`) so progress streams live in the
+  Nemo terminal window.
+* **v4** — Press-Enter close conventions and formatting aligned with the
+  suite's other guides.
+* **Retired 2026-08-30** — when the merged **linux-audio-nemo-actions**
+  guide (v1 below) combined the SHA-512 verification actions with the
+  ReplayGain and tag actions into a single guide. Archived copies of the
+  legacy guide live in the local `nemo-sha512-actions/` archive.
+
+---
+
 ## v1 Change Log (2026-09-14)
 
 First version. Merges the SHA512 and ReplayGain Nemo actions into a single
