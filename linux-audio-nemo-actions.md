@@ -1,6 +1,21 @@
 ### linux-audio-nemo-actions
 
-**Version: v8** — Manifest convention change: the Regenerate ALBUM and
+**Version: v10** — Artist-digest scope change: the Regenerate ARTIST
+action (Part 2B) and the Verify ARTIST action (Part 2) now hash
+**EVERYTHING in each album folder, INCLUDING `ALBUM.sha512sums.txt`** —
+audio files, cover art, and the album manifest itself, no exceptions
+(owner standard 2026-09-27, matching the SHA-512 guide's v18; a corrupted
+ALBUM manifest is caught at the artist tier). The Regenerate ALBUM action
+(Part 2A) remains AUDIO FILES ONLY. Supersedes v9. (2026-09-27.)
+
+Previous v9 — Artist-digest convention change: the Regenerate ARTIST
+action (Part 2B) and the Verify ARTIST action (Part 2) now hash
+**EVERYTHING in each album folder except `ALBUM.sha512sums.txt`** —
+audio files AND cover art, no exceptions (owner standard 2026-09-27,
+matching the SHA-512 guide's v17). The Regenerate ALBUM action (Part 2A)
+remains AUDIO FILES ONLY. Supersedes v8. (2026-09-27.)
+
+Previous v8 — Manifest convention change: the Regenerate ALBUM and
 Regenerate ARTIST actions (Parts 2A/2B) and the Verify ARTIST action
 (Part 2) now hash **AUDIO FILES ONLY** — cover art and other non-audio
 files are excluded, matching the SHA-512 guide's v16 convention.
@@ -449,11 +464,7 @@ if [ -f "ARTIST.sha512sums.txt" ]; then
 
         actual_hash=$(
             cd "$album" &&
-            find . -type f ! -name "ALBUM.sha512sums.txt" \
-            \( -iname "*.flac" -o -iname "*.mp3" -o -iname "*.m4a" -o -iname "*.mp4" \
-               -o -iname "*.ogg" -o -iname "*.opus" -o -iname "*.wav" -o -iname "*.aiff" \
-               -o -iname "*.aif" -o -iname "*.aac" -o -iname "*.alac" -o -iname "*.ape" \
-               -o -iname "*.wv" -o -iname "*.spx" -o -iname "*.dsf" \) -print0 |
+            find . -type f -print0 |
             LC_ALL=C sort -z |
             xargs -0 sha512sum |
             sha512sum |
@@ -532,7 +543,7 @@ In nano: `Ctrl+O`, `Enter`, `Ctrl+X`
 
 ---
 
-Rebuilds `ALBUM.sha512sums.txt` for one album folder. Use this after an **intentional** change to an album's contents: re-tagging, adding or removing a file, replacing a corrupted track with a restored copy. It hashes AUDIO FILES ONLY in the folder (cover art and other non-audio files are excluded), matching the SHA-512 Library guide's v16 convention exactly.
+Rebuilds `ALBUM.sha512sums.txt` for one album folder. Use this after an **intentional** change to an album's contents: re-tagging, adding or removing a file, replacing a corrupted track with a restored copy. It hashes AUDIO FILES ONLY in the folder (cover art and other non-audio files are excluded), matching the SHA-512 guide's ALBUM convention exactly (audio files only, since v16).
 
 The script reports every file as `[SAME]`, `[UPDATED]` (checksum unchanged, name changed — a rename), `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. **`[CHANGED]` means the file's audio content changed** — if you did not intentionally change it, stop and investigate (possible bit rot or an incomplete copy) instead of accepting the new manifest.
 
@@ -715,7 +726,7 @@ Rebuilds `ARTIST.sha512sums.txt` for one artist folder from all of its album sub
 
 The script reports each album as `[SAME]`, `[UPDATED]`, `[NEW]`, `[CHANGED]` or `[REMOVED]` against the previous manifest. A **folder rename** shows as `[UPDATED]` (same hash, new folder name) plus `[REMOVED]` for the old name — that is expected. **`[CHANGED]` means an album's contents changed** — if that was not intentional, investigate before accepting.
 
-It also flags album folders that have no `ALBUM.sha512sums.txt` (they are still hashed over their audio files — the artist digest is audio-only per the v16 convention — but lack the per-file protection layer).
+It also flags album folders that have no `ALBUM.sha512sums.txt` (they are still hashed over their full contents — the artist digest covers everything in the album folder except the manifest itself, per the SHA-512 guide's v17 convention — but lack the per-file protection layer).
 
 -- Step 1 — Create the regeneration script
 
@@ -731,14 +742,13 @@ nano ~/.local/bin/regen-artist-sha512
 
 --- nano Paste Script Start ---
 ```python
-
 #!/usr/bin/env python3
 # ============================================================
 # regen-artist-sha512 — Regenerate ARTIST.sha512sums.txt
 # Nemo action: right-click ARTIST.sha512sums.txt (or the artist
 # folder). Recomputes the hash-of-hashes for every album folder,
 # matching the sha512 guide's Step 4 algorithm byte-for-byte:
-#   find . -type f ! -name ALBUM.sha512sums.txt (audio extensions only)
+#   find . -type f (everything: audio, art, ALBUM.sha512sums.txt)
 #   | LC_ALL=C sort -z
 #   | xargs -0 sha512sum | sha512sum   (first field)
 # ============================================================
@@ -755,20 +765,10 @@ def sha512_file(path):
     return h.hexdigest()
 
 
-AUDIO_EXTS = {".flac", ".mp3", ".m4a", ".mp4", ".ogg", ".opus", ".wav",
-              ".aiff", ".aif", ".aac", ".alac", ".ape", ".wv", ".spx", ".dsf"}
-
-
-def is_audio(fn):
-    return os.path.splitext(fn)[1].lower() in AUDIO_EXTS
-
-
 def album_hash(album_dir):
     paths = []
     for root, dirs, files in os.walk(album_dir):
         for fn in files:
-            if fn == "ALBUM.sha512sums.txt" or not is_audio(fn):
-                continue
             full = os.path.join(root, fn)
             rel = "./" + os.path.relpath(full, album_dir)
             paths.append(rel)
@@ -845,7 +845,7 @@ def main():
         print("\nNOTE: album folder(s) with no ALBUM.sha512sums.txt:")
         for a in missing:
             print(f"  {a}")
-        print("They are still hashed (the artist hash excludes the manifest),")
+        print("They are still hashed (the artist hash covers all files),")
         print("but they are not protected at the per-file layer. Consider")
         print("regenerating the album manifest for them too.")
 
@@ -871,6 +871,7 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
 ```
 --- nano Paste Script End ---
 

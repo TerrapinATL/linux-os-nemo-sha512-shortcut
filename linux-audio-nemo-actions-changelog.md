@@ -189,3 +189,36 @@ Review corrections applied 2026-09-14:
   the embedded scripts, verified).
 * **Versioned copy** — the prior guide (v7) was archived as
   `linux-audio-nemo-actions-v7.md` before editing, per the update rule.
+
+## v9 Change Log (2026-09-27)
+
+* **Artist-digest convention change: everything, no exceptions.** Owner
+  standard (2026-09-27), matching the SHA-512 guide's v17: the Regenerate
+  ARTIST action (Part 2B) and the Verify ARTIST action (Part 2) now hash
+  **EVERYTHING in each album folder except `ALBUM.sha512sums.txt`** —
+  audio files AND cover art, no exceptions. The Regenerate ALBUM action
+  (Part 2A) remains AUDIO FILES ONLY (the album tier protects the music;
+  the artist tier proves contents unchanged).
+* Part 2B's embedded script replaced with the installed
+  `~/.local/bin/regen-artist-sha512` (audio-only filter dropped;
+  verified byte-identical).
+* **Versioned copy** — the prior guide (v8) was archived as
+  `Old/linux-audio-nemo-actions-v8.md` before editing, per the update
+  rule.
+
+## v10 Change Log (2026-09-27)
+
+* **Artist-digest scope change: include the ALBUM manifest.** Owner
+  decision (2026-09-27): the Regenerate ARTIST action (Part 2B) and the
+  Verify ARTIST action (Part 2) now hash **EVERYTHING in each album
+  folder, INCLUDING `ALBUM.sha512sums.txt`** — audio files, cover art,
+  and the album manifest itself, no exceptions, matching the SHA-512
+  guide's v18. Rationale: a corrupted or tampered ALBUM manifest must be
+  caught at the artist tier. The Regenerate ALBUM action (Part 2A)
+  remains AUDIO FILES ONLY.
+* Part 2B's embedded script replaced with the installed
+  `~/.local/bin/regen-artist-sha512` (verified byte-identical); Part 2's
+  embedded Verify ARTIST script updated the same way.
+* **Versioned copy** — the prior guide (v9) was archived as
+  `Old/linux-audio-nemo-actions-v9.md` before editing, per the update
+  rule.
